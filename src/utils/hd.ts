@@ -7,7 +7,7 @@ import vwAndroid from 'umi-hd/lib/vw-no-android-hd';
 (()=> {
   if (typeof document !== 'undefined') {
     if (document.documentElement.clientWidth >= 750) {
-      if (deviceHelper.isAndroid) {
+      if (deviceHelper.isAndroid()) {
         vwAndroid(100, 750);
       } else {
         vw(100, 750);

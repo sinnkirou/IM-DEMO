@@ -1,0 +1,85 @@
+.listContent {
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
+
+  a {
+    display: flex;
+    align-items: center;
+    color: black;
+  }
+
+  span:nth-child(1) {
+    padding-right: 30px;
+  }
+
+  .count {
+    flex: 1;
+    text-align: right;
+  }
+  
+  .icon {
+    color: white;
+    border-radius: 20%;
+    background-color: #4a90e2;
+    padding: 0.18rem;
+  }
+  
+  .passwordIcon {
+    .icon;
+    background-color: #f5ae1a;
+  }
+  
+  .aboutIcon {
+    .icon;
+    background-color: #00c24f;
+  }
+}
+
+.userBar {
+  .listContent;
+
+  .userHead {
+    padding-right: 20px;
+
+    .userIcon {
+      .icon;
+      border-radius: 50%;
+      background-color: #e7e4f7;
+      font-size: 0.6rem !important;
+    }
+
+    .userImg {
+      width: 0.9rem;
+      height: 0.9rem;
+      border-radius: 50%;
+    }
+  }
+  
+  .userInfo {
+    width: 60%;
+    max-width: 60% !important;
+    padding-bottom: 15px;
+    // font-size: 0.7rem;
+  }
+  
+  .nickname {
+    margin: 0;
+    overflow: hidden;
+    max-width: 4rem;
+    text-overflow: ellipsis;
+  }
+  
+  .email {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}
+
+.signOutBtn {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 1.5rem;
+}
+
+

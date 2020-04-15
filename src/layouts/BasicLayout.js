@@ -2,7 +2,7 @@
  * @Author: Jan-superman 
  * @Date: 2018-09-27 20:38:14 
  * @Last Modified by: mikey.zhaopeng
- * @Last Modified time: 2020-04-14 15:50:59
+ * @Last Modified time: 2020-04-15 16:10:50
  */
 
 import React, { PureComponent } from 'react';
@@ -34,7 +34,7 @@ class BasicLayout extends PureComponent {
 
     const BarRoutes = tabBarData.map(i => i.link);
     if (BarRoutes.indexOf(location.pathname) < 0) {
-      return <div>{children}</div>;
+      return <>{children}</>;
     }
 
     return <MenuBar pathname={location.pathname}>{children}</MenuBar>;

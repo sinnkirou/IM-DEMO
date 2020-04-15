@@ -1,0 +1,60 @@
+.box {
+  width: 40px;
+  height: 40px;
+  box-sizing: border-box;
+  position: relative;
+  margin-left: 1.2rem;
+}
+.wiFiSymbol {
+  width: 50px;
+  height: 50px;
+  box-sizing: border-box;
+  overflow: hidden;
+  transform: rotate(135deg);
+}
+.wiFiCircle {
+  border: 1px solid white;
+  border-radius: 50%;
+  position: absolute;
+}
+
+.first {
+  width: 1px;
+  height: 1px;
+  background: white;
+  top: 45px;
+  left: 45px;
+}
+
+.second {
+  width: 25px;
+  height: 25px;
+  top: 35px;
+  left: 35px;
+}
+
+.third {
+  width: 40px;
+  height: 40px;
+  top: 25px;
+  left: 25px;
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0; /* 初始状态 透明度为0 */
+  }
+  100% {
+    opacity: 1; /* 结尾状态 透明度为1 */
+  }
+}
+
+.secondPlaying {
+  .second;
+  animation: fadeInOut 1s infinite 0.2s;
+}
+
+.thirdPlaying {
+  .third;
+  animation: fadeInOut 1s infinite 0.4s;
+}

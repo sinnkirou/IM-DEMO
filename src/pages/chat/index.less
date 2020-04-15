@@ -1,0 +1,98 @@
+.titleIcon {
+  margin-bottom: 10px;
+  color: white;
+}
+
+.scrollList {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden !important;
+
+  .mssageRow {
+
+    .datetime {
+      font-size: 0.2rem;
+    }
+  
+    .from {
+      font-size: 0.2rem;
+      color: gray;
+      padding-left: 0.2rem;
+    }
+    .message {
+      padding: 0.2rem;
+      border-radius: 0.2rem;
+      -webkit-user-select: auto;
+      user-select: auto;
+      font-size: 0.35rem;
+    }
+    
+    .otherMessage {
+      .message;
+      background-color: #ddd;
+    }
+    
+    .ownMessage {
+      .message;
+      background-color: @brand-primary;
+      color: white;
+      text-align: right;
+    }
+    
+    .messageImg {
+      .message;
+      width: 50%;
+      height: 50%;
+    }
+    
+    .userIcon {
+      font-size: 0.5rem;
+    }
+    
+    .roundIcon {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      border-radius: 50%;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+  }
+}
+
+.toolPanel {
+  background-color: @brand-second;
+
+  .inputPanel {
+    display: flex;
+    align-items: center;
+    padding: 0.2rem;
+    color: darkgray;
+    form {
+      display: inline-block;
+      flex: 1;
+      margin-right: 0.2rem;
+    }
+    :global {
+  
+      .am-list-line {
+        border: 1px solid #cecbcb80;
+        background-color: white;
+        padding: 0.2rem;
+      }
+    }
+  }
+
+  .multiplePanel {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    i {
+      flex: 1;
+      padding: 0.2rem;
+      font-size: 0.75rem;
+    }
+  }
+}

@@ -208,7 +208,7 @@ body {
   z-index: 10;
 }
 
-.am-list-item,
+.am-list-item.am-input-item,
 .am-navbar-light {
   background-color: @brand-second !important;
 }
@@ -229,4 +229,23 @@ body {
 
 i.iconfont {
   font-size: @font-size-base;
+}
+
+.sticky-list .sticky-container .am-list-item {
+	padding-left: 0;
+}
+.sticky-list .sticky-container .am-list-line {
+	padding-right: 0;
+}
+.sticky-list .sticky-container .am-list-line .am-list-content {
+	padding-top: 0;
+	padding-bottom: 0;
+}
+.sticky-list .sticky-container .sticky {
+	padding: 7px 15px;
+	transform: none;
+}
+
+.slider-frame, .slider-list {
+  height: inherit !important;
 }
