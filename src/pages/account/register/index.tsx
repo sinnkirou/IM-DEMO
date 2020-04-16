@@ -14,30 +14,25 @@ interface IState {
 class Index extends Component<{
   [propName: string]: any;
 }> {
-
   public state: IState = {
     confirmDirty: false,
   };
   public signup = () => {
-    const { d } = this.props.location.query;
     const { form } = this.props;
     form.validateFields((error, values) => {
       if (!error) {
         Toast.loading('loading...', 25);
         const { dispatch } = this.props;
-        const { email, password, phone } = values;
+        const { email, password, nickName } = values;
         dispatch({
           type: 'app/register',
-          payload: { account: email, password, phone },
+          payload: { email, password, nickName },
         })
           .then(() => {
             Toast.hide();
             Toast.info('Registered successfully');
             router.push({
-              pathname: '/signin',
-              query: {
-                d,
-              },
+              pathname: '/account',
             });
           })
           .catch(Toast.fail);
@@ -114,6 +109,17 @@ class Index extends Component<{
             <span className={getFieldError('email') ? 'error' : ''}>Email</span>
           </InputItem>
           <InputItem
+            {...getFieldProps('nickName', {
+              rules: [{ required: true, message: 'Nickname is required' }],
+              validateTrigger: ['onBlur'],
+            })}
+            clear={true}
+            error={getFieldError('nickName')}
+            onErrorClick={() => this.handleOnErrorClick('nickName')}
+          >
+            <span className={getFieldError('nickName') ? 'error' : ''}>Nickname</span>
+          </InputItem>
+          <InputItem
             type="password"
             {...getFieldProps('password', {
               rules: [
@@ -156,12 +162,13 @@ class Index extends Component<{
         </List>
 
         <WhiteSpace size="xl" />
+        {this.renderButton()}
       </ScrollWrap>
     );
   };
 
   public render() {
-    return [this.renderTitle(), this.renderForm(), this.renderButton()];
+    return [this.renderTitle(), this.renderForm()];
   }
 }
 

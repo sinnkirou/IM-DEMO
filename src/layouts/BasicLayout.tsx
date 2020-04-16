@@ -2,25 +2,32 @@
  * @Author: Jan-superman 
  * @Date: 2018-09-27 20:38:14 
  * @Last Modified by: mikey.zhaopeng
- * @Last Modified time: 2020-04-15 16:10:50
+ * @Last Modified time: 2020-04-16 15:49:02
  */
 
-import React, { PureComponent } from 'react';
-import MenuBar from '@/components/MenuBar';
-import { tabBarData } from '@/components/MenuBar';
-import NProgress from 'nprogress';
-import withRouter from 'umi/withRouter';
-import { connect } from 'dva';
+import MenuBar, { tabBarData } from '@/components/MenuBar';
 import '@/layouts/nprogress.less';
+import { IMState } from '@/models/im';
+import { Toast } from 'antd-mobile';
+import { connect } from 'dva';
+import NProgress from 'nprogress';
+import React, { PureComponent } from 'react';
+import withRouter from 'umi/withRouter';
 
 NProgress.configure({ showSpinner: false });
 
 // 底部有bar菜单
 let currHref = '';
 
-class BasicLayout extends PureComponent {
-  render() {
-    const { children, location, loading } = this.props;
+interface IProps extends IConnectProps {
+  im: IMState
+}
+class BasicLayout extends PureComponent<IProps> {
+  public render() {
+    const { children, location, loading, im: {
+      loginStatus,
+      linkStatus
+    } } = this.props;
     const { href } = window.location; // 浏览器地址栏中地址
     if (currHref !== href) {
       // currHref 和 href 不一致时说明进行了页面跳转
@@ -32,6 +39,13 @@ class BasicLayout extends PureComponent {
       }
     }
 
+    if(linkStatus === false) {
+      Toast.offline('Network connection failed.');
+    }
+    if(loginStatus === false) {
+      Toast.fail('Log in failed.');
+    }
+
     const BarRoutes = tabBarData.map(i => i.link);
     if (BarRoutes.indexOf(location.pathname) < 0) {
       return <>{children}</>;
@@ -41,4 +55,4 @@ class BasicLayout extends PureComponent {
   }
 }
 
-export default withRouter(connect(({ app, loading }) => ({ app, loading }))(BasicLayout));
+export default withRouter(connect(({ im, loading }) => ({ im, loading }))(BasicLayout));

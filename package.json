@@ -19,7 +19,6 @@
   },
   "dependencies": {
     "antd-mobile": "^2.2.5",
-    "antd-mobile-demo-data": "^0.3.0",
     "axios": "^0.19.2",
     "better-scroll": "^1.13.2",
     "dva": "^2.4.0",
@@ -27,6 +26,7 @@
     "glob": "^7.1.3",
     "hammerjs": "^2.0.8",
     "hash.js": "^1.1.5",
+    "lodash": "^4.17.15",
     "moment": "^2.24.0",
     "nprogress": "^0.2.0",
     "prop-types": "^15.5.10",

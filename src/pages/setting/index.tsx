@@ -5,8 +5,10 @@ import React, { PureComponent } from 'react';
 import Link from 'umi/link';
 import router from 'umi/router';
 import styles from './index.less';
+import { IAppState } from '@/models/app';
 
 interface IProps extends IConnectProps {
+  app: IAppState
 }
 
 @connect(({ app }) => ({
@@ -21,7 +23,7 @@ class Index extends PureComponent<IProps> {
   );
 
   public renderUserInfo = () => {
-
+    const { app: { user } } = this.props;
     return (
       <div key="userInfo">
         <List>
@@ -35,8 +37,8 @@ class Index extends PureComponent<IProps> {
                 {/* )} */}
               </span>
               <span className={styles.userInfo}>
-                <h3 className={styles.nickname}>{'李四'}</h3>
-                <span className={styles.email}>{'z@g.com'}</span>
+                <h3 className={styles.nickname}>{user.nickname}</h3>
+                <span className={styles.email}>{user.email}</span>
               </span>
             </Link>
           </List.Item>

@@ -1,8 +1,17 @@
-import { userLogin, userRegister, } from '@/servers/user';
+import { getUserInfo, userLogin, userRegister } from '@/servers/user';
 import storage from '@/utils/storage';
 
-const defState = {
-  user: {},
+export interface IAppState {
+  user?: {
+    id: number;
+    email: string;
+    nickname: string;
+    token: string;
+  }
+}
+
+const defState: IAppState = {
+  user: null,
 };
 export default {
   namespace: 'app',
@@ -17,6 +26,7 @@ export default {
         storage.local.set('user', data);
         yield put({ type: 'app/STATE', payload: { user: data } });
         console.log(data);
+
         return data;
       }
     },
@@ -24,6 +34,9 @@ export default {
       storage.cookie.remove('token');
       storage.local.clear();
       yield put({ type: 'RESET' });
+      yield put({
+        type: 'im/signout'
+      })
     },
     *register({ payload }, { call, }) {
       const { message, success, } = yield call(userRegister, payload);
@@ -31,6 +44,14 @@ export default {
         throw message;
       }
     },
+    *getUserInfo({ payload }, { call}) {
+      const { message, success, data } = yield call(getUserInfo, payload);
+      if (!success) {
+        throw message;
+      } else {
+        return data;
+      }
+    }
   },
   reducers: {
     STATE(state, { payload }) {

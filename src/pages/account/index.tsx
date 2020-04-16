@@ -13,28 +13,31 @@ class Index extends PureComponent<{
     const { form } = this.props;
     form.validateFields((error, value) => {
       if (!error) {
-        // Toast.loading('loading...', 25);
+        Toast.loading('loading...', 25);
         const { dispatch } = this.props;
         const { email, password } = value;
-        // dispatch({
-        //   type: 'app/signIn',
-        //   payload: {
-        //     email,
-        //     password,
-        //   },
-        // })
-        //   .then(result => {
-        //     console.log(result);
-        //     Toast.hide();
+        dispatch({
+          type: 'app/signIn',
+          payload: {
+            email,
+            password,
+          },
+        })
+          .then(result => {
+            console.debug(result);
+            dispatch({
+              type: 'im/signin',
+            })
+            Toast.hide();
             router.push('/home');
-          // })
-          // .catch(Toast.fail);
+          })
+          .catch(Toast.fail);
       }
     });
   };
 
   public renderTitle = () => (
-    <div>
+    <div key="title">
       <WhiteSpace size='xl' />
       <WingBlank size="lg">
         <span style={{ display: ' block', textAlign: 'center' }}>SRT IM DEMO</span>

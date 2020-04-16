@@ -1,65 +1,100 @@
-import React, { PureComponent } from 'react';
+import AudioPlaying from '@/components/AudioPlaying';
+import BizIcon from '@/components/BizIcon';
+import Swiper from '@/components/Swiper';
+import { IAppState } from '@/models/app';
+import { IMessage, IMState, IMessageBase } from '@/models/im';
 import {
-  NavBar,
-  Icon,
-  List,
-  InputItem,
-  Flex,
-  ListView,
-  PullToRefresh,
-  WhiteSpace,
-  Toast,
   ActivityIndicator,
+  Flex,
   Grid,
+  Icon,
+  InputItem,
+  ListView,
+  NavBar,
+  PullToRefresh,
+  Toast,
+  WhiteSpace,
 } from 'antd-mobile';
-import router from 'umi/router';
 import { connect } from 'dva';
-import { createForm } from 'rc-form';
-import uuid from 'uuid/v1';
-import moment from 'moment';
 import Hammer from 'hammerjs';
+import get from 'lodash/get';
+import isEmpty from 'lodash/isEmpty';
+import moment from 'moment';
+import { createForm } from 'rc-form';
+import React, { PureComponent } from 'react';
+import router from 'umi/router';
+import { v1 as uuid } from 'uuid';
 // import Manager from 'srt-im-sdk';
 import styles from './index.less';
-import BizIcon from '@/components/BizIcon';
-import AudioPlaying from '@/components/AudioPlaying';
-import Swiper from '@/components/Swiper';
-import imageSrc from '@/assets/newUpdate.png';
 
-const emojis = ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '😍', '🤩', '😘', '😗', '😚', '😙', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧'];
+const emojis = [
+  '😀',
+  '😃',
+  '😄',
+  '😁',
+  '😆',
+  '😅',
+  '🤣',
+  '😂',
+  '🙂',
+  '🙃',
+  '😉',
+  '😊',
+  '😇',
+  '😍',
+  '🤩',
+  '😘',
+  '😗',
+  '😚',
+  '😙',
+  '😋',
+  '😛',
+  '😜',
+  '🤪',
+  '😝',
+  '🤑',
+  '🤗',
+  '🤭',
+  '🤫',
+  '🤔',
+  '🤐',
+  '🤨',
+  '😐',
+  '😑',
+  '😶',
+  '😏',
+  '😒',
+  '🙄',
+  '😬',
+  '🤥',
+  '😌',
+  '😔',
+  '😪',
+  '🤤',
+  '😴',
+  '😷',
+  '🤒',
+  '🤕',
+  '🤢',
+  '🤮',
+  '🤧',
+];
 const emojiData = emojis.map(emoji => ({ text: emoji }));
 
-const _messages: IMessage[] = [
-  {
-    from: '张三',
-    value: 'Welcome, what can I do for you?',
-    id: uuid(),
-    time: '2019-09-04 11:55:00',
-  },
-  {
-    from: '张三',
-    value: "I'm the recipient! (The person you're talking to)",
-    id: uuid(),
-    time: '2019-09-04 11:56:00',
-  },
-  { isOwn: true, value: "I'm you -- the blue bubble!", id: uuid(), time: '2019-09-04 12:00:00' },
-  { isOwn: true, value: imageSrc, type: 'image', id: uuid(), time: '2019-09-04 12:05:00' },
-  { isOwn: true, value: "I'm you -- the blue bubble!", id: uuid(), time: '2019-09-04 12:06:00' },
-  { from: '张三', value: imageSrc, type: 'image', id: uuid(), time: '2019-09-04 12:07:00' },
-  { from: '张三', value: imageSrc, type: 'image', id: uuid(), time: '2019-09-04 12:08:00' },
-];
+enum DataType {
+  TEXT = 'TEXT',
+  IMAGE = 'IMAGE',
+  AUDIO = 'AUDIO',
+  FILE = 'FILE',
+}
 
-interface IMessage {
-  value;
-  isOwn?: boolean;
-  type?;
-  from?;
-  id?: string;
-  time?: string;
+interface IUser {
+  id: string;
+  username: string;
 }
 
 interface IState {
   refreshing: boolean;
-  messages: IMessage[];
   page: number;
   total: number;
   lastTimeStamps?: object;
@@ -68,42 +103,37 @@ interface IState {
   curImageId?: string;
   recording?: boolean;
   audioDurations?: object;
-  playingItem: boolean;
+  playingItem?: string;
   toggleTarget?: 'emoji' | 'audio' | 'multiple' | 'input';
   emojiHeight?: number;
+  currentUser: IUser;
+  targetUser: IUser;
+  messages: IMessage[];
 }
 
 interface IProps extends IConnectFormProps {
-  fromUser: {
-    id;
-    username: string;
+  location: {
+    query: {
+      targetId: string;
+    };
   };
-  toUser: {
-    id;
-    username: string;
-  };
-  msgs: {
-    id;
-    userId;
-    groupId;
-    createTime: string;
-    content: string;
-  }[];
+  app: IAppState;
+  im: IMState;
 }
 
-@connect(({ app }) => ({
+@connect(({ app, im }) => ({
   app,
+  im,
 }))
 class Index extends PureComponent<IProps> {
-  dataSource = null;
-  audios = null;
-  imageIds = null;
-  scrollView = null;
-  inputMessage = null;
+  public dataSource = null;
+  public audios = null;
+  public imageIds = null;
+  public scrollView = null;
+  public inputMessage = null;
 
-  state: IState = {
+  public state: IState = {
     refreshing: false,
-    messages: _messages,
     page: 0,
     total: 100,
     lastTimeStamps: {},
@@ -113,8 +143,10 @@ class Index extends PureComponent<IProps> {
     curImageId: null,
     recording: false,
     audioDurations: {},
-    playingItem: false,
     emojiHeight: 0,
+    currentUser: {},
+    targetUser: {},
+    messages: [],
   };
 
   constructor(props) {
@@ -122,27 +154,74 @@ class Index extends PureComponent<IProps> {
     this.dataSource = new ListView.DataSource({
       rowHasChanged: (row1, row2) => row1 !== row2,
     });
-    // this.initClient();
     this.audios = {};
     this.imageIds = [];
   }
 
-  componentDidMount() {
+  static getDerivedStateFromProps(props: IProps, state: IState) {
+    const {
+      location: {
+        query: { targetId },
+      },
+      im: { messages },
+      app: { user },
+    } = props;
+    const filteredMessages = messages.filter(
+      (i: IMessage) => String(i.from) === String(user.id) || String(i.from) === String(targetId)
+    );
+    return {
+      messages: filteredMessages,
+    };
+  }
+
+  public componentDidMount() {
     this.scrollIntoLatest();
     this.handleGesture();
+    const {
+      location: {
+        query: { targetId },
+      },
+      app: { user },
+      dispatch,
+    } = this.props;
+    dispatch({
+      type: 'im/syncMessages',
+      payload: {
+        targetId,
+        page: 1
+      },
+    }).catch(Toast.fail);
+    dispatch({
+      type: 'app/getUserInfo',
+      payload: {
+        ids: targetId,
+      },
+    })
+      .then(data => {
+        const { nickName, email } = data[0];
+        this.setState({
+          targetUser: {
+            username: nickName,
+            id: targetId,
+          },
+          currentUser: {
+            username: get(user, 'nickname'),
+            id: get(user, 'id'),
+          },
+        });
+      })
+      .catch(Toast.fail);
   }
 
-  componentWillUnmount() {
-    // Manager.getInstance().release();
-  }
-
-  scrollIntoLatest = () => {
+  public scrollIntoLatest = () => {
     setTimeout(() => {
-      if (this.scrollView) this.scrollView.scrollTo(0, 12000);
+      if (this.scrollView) {
+        this.scrollView.scrollTo(0, 12000);
+      }
     }, 200);
   };
 
-  handleGesture = () => {
+  public handleGesture = () => {
     const press = new Hammer(document.getElementsByClassName('am-input-item')[0]);
     press.on(
       'press',
@@ -176,7 +255,7 @@ class Index extends PureComponent<IProps> {
         //   audioUtil.stopRecord(this.audios[this.mediaSrc]);
         //   this.setState({ recording: false });
         //   setTimeout(() => {
-        //     this.appendMessage({ value: this.mediaSrc, type: 'audio' });
+        //     this.appendMessage({ dataContent: this.mediaSrc, type: 'audio' });
         //   }, 1000);
         // }
       },
@@ -202,7 +281,7 @@ class Index extends PureComponent<IProps> {
   //       onTransBufferCB: params => {
   //         const { dataContent } = params;
   //         console.log(params);
-  //         this.appendMessage({ value: dataContent, isOwn: false });
+  //         this.appendMessage({ dataContent: dataContent, isOwn: false });
   //       },
   //       onTransErrorCB: params => {
   //         console.log(params);
@@ -222,101 +301,128 @@ class Index extends PureComponent<IProps> {
   //   }, 1000);
   // };
 
-  renderTitle = () => {
-    // const { toUser } = this.props;
+  public renderTitle = () => {
+    const { targetUser } = this.state;
     return (
       <NavBar
         mode="dark"
         icon={<Icon type="left" className={styles.titleIcon} />}
-        onLeftClick={() => router.push('/setting')}
+        onLeftClick={router.goBack}
         key="title"
       >
-        {/* {toUser.username} */}
-        {'toUser'}
+        {targetUser.username}
       </NavBar>
     );
   };
 
-  appendMessage = (newMessage: IMessage) => {
-    const { messages } = this.state;
-    const { isOwn, value, type, from } = newMessage;
-    const newMessages = messages.concat({
-      isOwn,
-      value,
-      type,
-      id: uuid(),
-      time: moment().format('YYYY-MM-DD HH:mm:ss'),
-      from,
+  public appendMessage = (message: IMessageBase) => {
+    const { dispatch } = this.props;
+    const newMessage = {
+      ...message,
+      fp: uuid(),
+      sendTs: moment().format('YYYY-MM-DD HH:mm:ss'),
+    };
+    dispatch({
+      type: 'im/MESSAGE',
+      payload: {
+        ...newMessage,
+        sentSuccess: true,
+      },
     });
     this.setState({
-      messages: newMessages,
-      toggleMultiple: false,
+      toggleTarget: 'input',
     });
     setTimeout(() => this.scrollIntoLatest(), 200);
   };
 
-  emitCallback = ({ code, message }) => {
+  public emitCallback = ({ code, message }) => {
     Toast.fail(message);
   };
 
-  onSendMessage = () => {
-    const { form } = this.props;
+  public onSendMessage = () => {
+    const { form, dispatch } = this.props;
+    const { targetUser, currentUser } = this.state;
     // deviceHelper.setSoftKeyboardVisible(false);
-    form.validateFields((error, value) => {
+    form.validateFields((error, values) => {
       if (!error) {
-        const { inputMessage } = value;
-        // Manager.getInstance().send(inputMessage, '1', '2', true);
-        this.appendMessage({ value: inputMessage, isOwn: true });
+        const { inputMessage } = values;
+        // this.appendMessage({ dataContent: inputMessage, from: currentUser.id, to: targetUser.id });
+        const message: IMessageBase = {
+          dataContent: inputMessage,
+          from: currentUser.id,
+          to: targetUser.id,
+        };
+        dispatch({
+          type: 'im/send',
+          payload: {
+            message,
+            handleSendResult: code => {
+              console.debug(code);
+              if (code === 0) {
+                this.appendMessage(message);
+              }
+            },
+          },
+        }).catch(Toast.fail);
+
         this.inputMessage.clearInput();
       }
     });
   };
 
-  onRefresh = () => {
-    const { refreshing, page, messages, total } = this.state;
+  public onRefresh = () => {
+    const { refreshing, page, total, messages } = this.state;
     if (messages.length >= total) {
       return;
     }
-    const newMessages: IMessage = [
+    const newMessages: IMessage[] = [
       {
-        value: "I'm new refreshed",
-        from: 'Gary',
-        id: uuid(),
-        time: moment()
+        dataContent: "I'm new refreshed",
+        from: '2',
+        to: '1',
+        fp: uuid(),
+        sendTs: moment()
           .subtract(Math.round(Math.random() * 19), 'months')
           .format('YYYY-MM-DD HH:mm:ss'),
       },
     ]
       .concat(messages)
-      .sort((x, y) => (moment(y.time).isAfter(moment(x.time)) ? -1 : 1));
-    this.setState({
-      messages: newMessages,
-      refreshing: false,
-      page: refreshing ? page + 1 : 0,
-    });
+      .sort((x, y) => (moment(y.sendTs).isAfter(moment(x.sendTs)) ? -1 : 1));
+    // this.setState({
+    //   messages: newMessages,
+    //   refreshing: false,
+    //   page: refreshing ? page + 1 : 0,
+    // });
   };
 
-  shouldShowTimeStamp = ({ time, id }) => {
-    if (!time) return false;
-    const key = moment(time).format('YYYY-MM-DD HH:mm');
+  public shouldShowTimeStamp = (messgae: IMessage) => {
+    const { sendTs, fp } = messgae;
+    if (!sendTs) {
+      return false;
+    }
+    const key = moment(sendTs).format('YYYY-MM-DD HH:mm');
     const { lastTimeStamps } = this.state;
     const timestamp = lastTimeStamps[key];
     let result = true;
     if (!timestamp) {
       Object.keys(lastTimeStamps).forEach(item => {
-        if (moment(time).isBetween(moment(item).subtract(5, 'm'), moment(item).add(5, 'm'))) {
+        if (moment(sendTs).isBetween(moment(item).subtract(5, 'm'), moment(item).add(5, 'm'))) {
           result = false;
         }
       });
-      if (result) lastTimeStamps[key] = id;
+      if (result) {
+        lastTimeStamps[key] = fp;
+      }
     } else {
       result = false;
-      if (timestamp && timestamp === id) result = true;
+      if (timestamp && timestamp === fp) {
+        result = true;
+      }
     }
     return result;
   };
 
-  formatTimeStamp = time => {
+  public formatTimeStamp = time => {
     if (moment(time).format('YYYY-MM-DD') === moment().format('YYYY-MM-DD')) {
       return moment(time).format('HH:mm');
     }
@@ -338,7 +444,7 @@ class Index extends PureComponent<IProps> {
   };
 
   // playAudio = item => {
-  //   const { id, value: src } = item;
+  //   const { id, dataContent: src } = item;
   //   const { playingItem, audioDurations } = this.state;
 
   //   this.setState({ playingItem: !playingItem ? id : null }, () => {
@@ -389,72 +495,87 @@ class Index extends PureComponent<IProps> {
   //   }, 100);
   // };
 
-  getAudioWidth = src => {
+  public getAudioWidth = src => {
     const { audioDurations } = this.state;
     return audioDurations[src] ? audioDurations[src] / 10 + 3 : 0;
   };
 
-  generateRow = item => {
-    const { userImageSrc, playingItem, audioDurations } = this.state;
-    if (item.type === 'audio') {
-      // this.setDuration(item.value);
-    } else if (item.type === 'image') {
-      this.imageIds.push(item.id);
+  public getDataType = (dataContent: string) => {
+    switch (dataContent) {
+      case '[image]':
+        return DataType.IMAGE;
+      case '[audio]':
+        return DataType.AUDIO;
+      default:
+        return DataType.TEXT;
     }
+  };
+
+  public generateRow = (item: IMessage) => {
+    if (isEmpty(item)) return null;
+    const { userImageSrc, playingItem, audioDurations } = this.state;
+    const { currentUser } = this.state;
+    const isOwn = String(item.from) === String(currentUser.id);
+    const dataType = this.getDataType(item.dataContent);
+    // if (item.type === 'audio') {
+    //   // this.setDuration(item.dataContent);
+    // } else if (item.type === 'image') {
+    //   this.imageIds.push(item.id);
+    // }
     return (
-      <div key={item.id} id={item.id} className={styles.mssageRow}>
+      <div key={item.fp} id={item.fp} className={styles.mssageRow}>
         {this.shouldShowTimeStamp(item) && (
           <>
             <WhiteSpace />
             <Flex justify="center">
-              <span className={styles.datetime}>{this.formatTimeStamp(item.time)}</span>
+              <span className={styles.datetime}>{this.formatTimeStamp(item.sendTs)}</span>
             </Flex>
             <WhiteSpace />
           </>
         )}
-        <Flex justify={item.isOwn ? 'end' : 'start'} align="start">
-          {!item.isOwn && <BizIcon type="icon-test" className={styles.userIcon} />}
 
-          <Flex direction="column" align={item.isOwn ? 'end' : 'start'}>
-            <span className={styles.from}>{item.from ? item.from : ''}</span>
-            {(!item.type || item.type === 'text') && (
-              <span
-                className={`messageItem ${item.isOwn ? styles.ownMessage : styles.otherMessage}`}
-              >
-                {item.value}
+        {/** messages **/}
+        <Flex justify={isOwn ? 'end' : 'start'} align="start">
+          {!isOwn && <BizIcon type="icon-test" className={styles.userIcon} />}
+
+          <Flex direction="column" align={isOwn ? 'end' : 'start'}>
+            <span className={styles.from}>{currentUser.username ? currentUser.username : ''}</span>
+            {dataType === DataType.TEXT && (
+              <span className={`messageItem ${isOwn ? styles.ownMessage : styles.otherMessage}`}>
+                {item.dataContent}
               </span>
             )}
-            {item.type === 'image' && (
+            {dataType === DataType.IMAGE && (
               <img
                 className={`messageItem ${styles.messageImg}`}
-                src={item.value}
+                src={item.dataContent}
                 alt="img"
                 onClick={() => {
                   this.setState({
                     toggleSwipe: true,
-                    curImageId: item.id,
+                    curImageId: item.fp,
                   });
                 }}
               />
             )}
-            {item.type === 'audio' && (
+            {dataType === DataType.AUDIO && (
               <span
-                className={`messageItem ${item.isOwn ? styles.ownMessage : styles.otherMessage}`}
+                className={`messageItem ${isOwn ? styles.ownMessage : styles.otherMessage}`}
                 onClick={() => {
                   // this.playAudio(item);
                 }}
-                style={{ width: `${this.getAudioWidth(item.value)}rem` }}
-                id={item.value}
+                style={{ width: `${this.getAudioWidth(item.dataContent)}rem` }}
+                id={item.dataContent}
               >
                 <Flex>
-                  {`${audioDurations[item.value]}''`}
-                  {<AudioPlaying isPlaying={playingItem === item.id} />}{' '}
+                  {`${audioDurations[item.dataContent]}''`}
+                  {<AudioPlaying isPlaying={playingItem === item.fp} />}{' '}
                 </Flex>
               </span>
             )}
           </Flex>
 
-          {item.isOwn &&
+          {isOwn &&
             (userImageSrc ? (
               <img src={userImageSrc} alt="head" className={styles.roundIcon} />
             ) : (
@@ -466,7 +587,7 @@ class Index extends PureComponent<IProps> {
     );
   };
 
-  renderChatBody = () => {
+  public renderChatBody = () => {
     const { refreshing, messages } = this.state;
 
     return (
@@ -484,16 +605,16 @@ class Index extends PureComponent<IProps> {
     );
   };
 
-  isDirty = () => {
+  public isDirty = () => {
     const { form } = this.props;
-    const value = form.getFieldValue('inputMessage');
-    return !!value;
+    const inputValue = form.getFieldValue('inputMessage');
+    return !!inputValue;
   };
 
   // onCameraSuccess = imageURL => {
   //   logger.info(`onCameraSuccess:_____________________${imageURL}`);
   //   const userImageSrc = `data:image/jpeg;base64,${imageURL}`;
-  //   this.appendMessage({ value: userImageSrc, type: 'image' });
+  //   this.appendMessage({ dataContent: userImageSrc, type: 'image' });
   // };
 
   // onCameraError = e => {
@@ -517,18 +638,18 @@ class Index extends PureComponent<IProps> {
   //   cameraUtil.takeFromGallery(this.onCameraSuccess, this.onCameraError, cameraOptions);
   // };
 
-  toggleTarget = (target: 'emoji' | 'audio' | 'multiple' | 'input') => {
+  public toggleTarget = (target: 'emoji' | 'audio' | 'multiple' | 'input') => {
     const { toggleTarget } = this.state;
     this.scrollIntoLatest();
     this.setState({ toggleTarget: toggleTarget === target ? 'input' : target });
   };
 
-  onFocus = () => {
+  public onFocus = () => {
     this.scrollIntoLatest();
-    this.setState({ toggleMultiple: false });
+    this.setState({ toggleTarget: 'input' });
   };
 
-  renderChatInput = () => {
+  public renderChatInput = () => {
     const { form } = this.props;
     const { getFieldProps } = form;
     const { toggleTarget, emojiHeight } = this.state;
@@ -577,11 +698,10 @@ class Index extends PureComponent<IProps> {
               this.toggleTarget('emoji');
               setTimeout(() => {
                 try {
-                  const emojiHeight = document.getElementsByClassName('slider-slide')[0].clientHeight;
+                  const emojiHeight = document.getElementsByClassName('slider-slide')[0]
+                    .clientHeight;
                   this.setState({ emojiHeight });
-                }catch{
-
-                }
+                } catch {}
               }, 500);
             }}
           />
@@ -605,26 +725,30 @@ class Index extends PureComponent<IProps> {
           </div>
         )}
         {toggleTarget === 'emoji' && (
-            <Grid
-              style={{height: emojiHeight}}
-              data={emojiData}
-              columnNum={8}
-              carouselMaxRow={4}
-              isCarousel={true}
-              onClick={(item) => {
-                // this.setState({ content: this.state.content + item.text })
-              }}
-            />
+          <Grid
+            style={{ height: emojiHeight }}
+            data={emojiData}
+            columnNum={8}
+            carouselMaxRow={4}
+            isCarousel={true}
+            onClick={item => {
+              const {
+                form: { setFieldsValue, getFieldValue },
+              } = this.props;
+              const inputMessage = getFieldValue('inputMessage');
+              setFieldsValue({ inputMessage: (inputMessage || '') + item.text });
+            }}
+          />
         )}
       </div>
     );
   };
 
-  renderRecordIndicator = () => {
+  public renderRecordIndicator = () => {
     const { recording } = this.state;
     return (
       <ActivityIndicator
-        toast
+        toast={true}
         text="Recording...Release to send"
         animating={recording}
         key="recordIndicator"
@@ -632,11 +756,13 @@ class Index extends PureComponent<IProps> {
     );
   };
 
-  renderSwiper = () => {
+  public renderSwiper = () => {
     const { toggleSwipe, curImageId, messages } = this.state;
     const imageURLs: string[] = [];
     messages.forEach(item => {
-      if (item.type === 'image') imageURLs.push(item.value);
+      if (item.dataContent === '[image]') {
+        imageURLs.push(item.dataContent);
+      }
     });
     const props = {
       imageURLs,
@@ -645,11 +771,13 @@ class Index extends PureComponent<IProps> {
         this.setState({ toggleSwipe: false });
       },
     };
-    if (toggleSwipe) return <Swiper {...props} key="swiperContainer" />;
+    if (toggleSwipe) {
+      return <Swiper {...props} key="swiperContainer" />;
+    }
     return null;
   };
 
-  render() {
+  public render() {
     return [
       this.renderTitle(),
       this.renderChatBody(),

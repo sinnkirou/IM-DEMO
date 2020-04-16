@@ -1,30 +1,31 @@
-// import { province } from 'antd-mobile-demo-data';
-import { StickyContainer, Sticky } from 'react-sticky';
-import { ListView, List, SearchBar, WhiteSpace } from 'antd-mobile';
+import { List, ListView, SearchBar, WhiteSpace } from 'antd-mobile';
 import React from 'react';
+import { Sticky, StickyContainer } from 'react-sticky';
 import { router } from 'umi';
 
 const { Item } = List;
 
-const province = {
+const users: {
+	[propName: string]: Array<{ id: number; nickname: string; spell: string }>;
+} = {
 	L: [
 		{
-			value: '100',
-			label: '李四',
+			id: 4,
+			nickname: '李四',
 			spell: 'lisi'
 		}
 	],
 	W: [
 		{
-			value: '110',
-			label: '王五',
+			id: 5,
+			nickname: '王五',
 			spell: 'wangwu'
 		}
 	],
 	Z: [
 		{
-			value: '120',
-			label: '张三',
+			id: 3,
+			nickname: '张三',
 			spell: 'zhangsan'
 		}
 	]
@@ -40,14 +41,23 @@ function genData(ds, provinceData) {
 		rowIDs[index] = [];
 
 		provinceData[item].forEach((jj) => {
-			rowIDs[index].push(jj.value);
-			dataBlob[jj.value] = jj.label;
+			rowIDs[index].push(jj.id);
+			dataBlob[jj.id] = jj.nickname;
 		});
 	});
 	return ds.cloneWithRowsAndSections(dataBlob, sectionIDs, rowIDs);
 }
 
 class Index extends React.Component {
+	public state: {
+		inputValue?: string;
+		dataSource: any;
+		isLoading: boolean;
+	} = {
+		dataSource: null,
+		isLoading: true
+	};
+
 	constructor(props) {
 		super(props);
 		const getSectionData = (dataBlob, sectionID) => dataBlob[sectionID];
@@ -67,16 +77,16 @@ class Index extends React.Component {
 		};
 	}
 
-	componentDidMount() {
+	public componentDidMount() {
 		// simulate initial Ajax
 		this.setState({
-			dataSource: genData(this.state.dataSource, province),
+			dataSource: genData(this.state.dataSource, users),
 			isLoading: false
 		});
 	}
 
-	onSearch = (val) => {
-		const pd = { ...province };
+	public onSearch = (val) => {
+		const pd = { ...users };
 		Object.keys(pd).forEach((item) => {
 			const arr = pd[item].filter((jj) => jj.spell.toLocaleLowerCase().indexOf(val) > -1);
 			if (!arr.length) {
@@ -91,7 +101,7 @@ class Index extends React.Component {
 		});
 	};
 
-	render() {
+	public render() {
 		return (
 			<div style={{ paddingTop: '44px', position: 'relative' }}>
 				<div style={{ position: 'absolute', top: 0, left: 0, right: 0 }}>
@@ -110,7 +120,7 @@ class Index extends React.Component {
 				<ListView.IndexedList
 					dataSource={this.state.dataSource}
 					className="am-list sticky-list"
-					useBodyScroll
+					useBodyScroll={true}
 					renderSectionWrapper={(sectionID) => (
 						<StickyContainer key={`s_${sectionID}_c`} className="sticky-container" style={{ zIndex: 4 }} />
 					)}
@@ -133,15 +143,22 @@ class Index extends React.Component {
 					)}
 					renderHeader={() => <WhiteSpace />}
 					renderFooter={() => <WhiteSpace />}
-					renderRow={(rowData) => <Item onClick={()=> {
-						debugger;
-						router.push({
-							pathname: '/chat',
-							query: {
-								targetId: rowData.value
-							}
-						})
-					}}>{rowData}</Item>}
+					renderRow={(rowData, sectionID, rowID) => (
+						<Item
+							onClick={() => {
+								const section = users[sectionID] || [];
+								const user = section.find((d) => d.id === rowID);
+								router.push({
+									pathname: '/chat',
+									query: {
+										targetId: user.id
+									}
+								});
+							}}
+						>
+							{rowData}
+						</Item>
+					)}
 					quickSearchBarStyle={{
 						top: 85
 					}}

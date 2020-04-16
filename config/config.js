@@ -61,9 +61,10 @@ export default {
     '@': path.resolve(__dirname, 'src'),
   },
   context: {
-    BASE_URL: 'http://192.168.198.202:6888',
-    USER_URL: 'http://192.168.198.202:6889',
+    BASE_URL: 'http://192.168.198.212:6888',
+    USER_URL: 'http://192.168.198.212:6889',
     FILE_RUL: 'http://192.168.198.227:8050',
+    WS_URL: 'ws://192.168.198.212:7901/ws',
     UPLOAD: {
       maxLen: 5,
       maxSize: 40 * 1024 * 1024,
