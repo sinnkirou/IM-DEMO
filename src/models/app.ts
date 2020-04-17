@@ -1,17 +1,23 @@
+import { Toast } from 'antd-mobile';
 import { getUserInfo, userLogin, userRegister } from '@/servers/user';
 import storage from '@/utils/storage';
 
 export interface IAppState {
-  user?: {
-    id: number;
-    email: string;
-    nickname: string;
-    token: string;
-  }
+  user?: IUser;
+  contacts: IUser[];
+}
+
+export interface IUser {
+  nickname: string;
+  id,
+  spell?: string;
+  email?: string;
+  token?: string;
 }
 
 const defState: IAppState = {
   user: null,
+  contacts: [],
 };
 export default {
   namespace: 'app',
@@ -21,11 +27,10 @@ export default {
       const { message, success, data } = yield call(userLogin, payload);
       if (!success) {
         throw message;
-      } else  {
+      } else {
         storage.cookie.set('token', data.token);
         storage.local.set('user', data);
-        yield put({ type: 'app/STATE', payload: { user: data } });
-        console.log(data);
+        yield put({ type: 'STATE', payload: { user: data } });
 
         return data;
       }
@@ -35,23 +40,29 @@ export default {
       storage.local.clear();
       yield put({ type: 'RESET' });
       yield put({
-        type: 'im/signout'
-      })
+        type: 'im/signout',
+      });
     },
-    *register({ payload }, { call, }) {
-      const { message, success, } = yield call(userRegister, payload);
+    *register({ payload }, { call }) {
+      const { message, success } = yield call(userRegister, payload);
       if (!success) {
         throw message;
       }
     },
-    *getUserInfo({ payload }, { call}) {
+    *getUserInfo({ payload }, { call, put }) {
       const { message, success, data } = yield call(getUserInfo, payload);
       if (!success) {
         throw message;
       } else {
+        yield put({
+          type: 'STATE',
+          payload: {
+            contacts: data,
+          },
+        });
         return data;
       }
-    }
+    },
   },
   reducers: {
     STATE(state, { payload }) {
@@ -61,14 +72,21 @@ export default {
   subscriptions: {
     init({ dispatch, history }) {
       dispatch({ type: 'STATE', payload: { user: storage.local.get('user') } });
-      // history.listen(({ pathname }) => {
-      //   if (!['/signin'].includes(pathname)) {
-      //     const user = storage.local.get('user');
-      //     if (!storage.cookie.get('token') || !user || !user.token) {
-      //       history.push('/signin');
-      //     }
-      //   }
-      // });
+      history.listen(({ pathname }) => {
+        if (!['/account'].includes(pathname)) {
+          const user = storage.local.get('user');
+          if (!storage.cookie.get('token') || !user || !user.token) {
+            history.push('/account');
+          }
+        }
+      });
+
+      if (storage.cookie.get('token')) {
+        dispatch({
+          type: 'getUserInfo',
+        })
+          .catch(Toast.fail);
+      }
     },
   },
 };

@@ -1,8 +1,12 @@
+import { Toast } from 'antd-mobile';
+import router from 'umi/router';
 import { syncMessages } from '@/servers/message';
 import { WS_URL } from '@/utils/config';
 import storage from '@/utils/storage';
 import concat from 'lodash/concat';
 import Manager from '../../shurui-im-sdk/src/index';
+import format from '@/utils/format';
+import { chatMessageRule } from '@/utils/formatRules';
 
 export interface IMessageBase {
 	from: string;
@@ -21,27 +25,8 @@ export interface IMState {
 	loginStatus: boolean;
 	linkStatus: boolean;
 	messages: IMessage[];
+	hasLoginedOnce?: boolean;
 }
-
-// const _messages: IMessage[] = [
-//     {
-//       from: '100',
-//       dataContent: 'Welcome, what can I do for you?',
-//       fp: uuid(),
-//       sendTs: '2019-09-04 11:55:00',
-//       to: '110',
-//     },
-//     {
-//       from: '100',
-//       dataContent: "I'm the recipient! (The person you're talking to)",
-//       fp: uuid(),
-//       sendTs: '2019-09-04 11:56:00',
-//       to: '110',
-//     },
-//     { to: '110', from: '100', dataContent: "I'm you -- the blue bubble!", fp: uuid(), sendTs: '2019-09-04 12:00:00' },
-//     { to: '110', from: '110', dataContent: "dasdasd", fp: uuid(), sendTs: '2019-09-04 12:05:00' },
-//     { to: '100', from: '110', dataContent: "I'm you -- the blue bubble!", fp: uuid(), sendTs: '2019-09-04 12:06:00' },
-//   ];
 
 const defState: IMState = {
 	loginStatus: undefined,
@@ -82,28 +67,43 @@ export default {
 			Manager.getInstance(options);
 		},
 		*signin({ payload }, { call, put, select }) {
-			const { id, token } = storage.local.get('user');
-			Manager.getInstance().login(id, token, 'test');
+			const { callBack, autoLogin } = payload;
+			const hasLoginedOnce = storage.local.get('hasLoginedOnce');
+			console.debug('autoLogin', autoLogin, 'hasLoginedOnce', hasLoginedOnce);
+			if (!autoLogin || (autoLogin && hasLoginedOnce)) {
+				const { id, token } = storage.local.get('user');
+				console.debug('id', id, 'token', token);
+				if (id && token) {
+					Manager.getInstance().login(id, token, 'test', null, (code) => {
+						if (callBack) callBack(code);
+					});
+				}
+			}
 		},
-		*signout() {
+		*signout({}, { put }) {
 			Manager.getInstance().logout();
+			yield put({
+				type: 'STATE',
+				payload: {
+					...defState
+				}
+			});
 		},
 		*release() {
 			Manager.getInstance().release();
 		},
 		*send({ payload }, { call, put, select }) {
 			const msg: IMessage = payload.message;
-			Manager.getInstance().send(msg.dataContent, msg.from, msg.to, true, msg.fp, null, (code) => {
+			Manager.getInstance().send(msg.dataContent, String(msg.from), String(msg.to), true, msg.fp, null, (code) => {
 				if (payload.handleSendResult) {
 					payload.handleSendResult(code);
 				}
 			});
 		},
 		*syncMessages({ payload }, { call, put }) {
-			const { targetId, page, pageSize } = payload;
+			const { pageSize } = payload;
 			const { message, success, data } = yield call(syncMessages, {
-				groupId: targetId,
-				page,
+				...payload,
 				pageSize: pageSize || 10
 			});
 			if (!success) {
@@ -123,16 +123,23 @@ export default {
 		},
 		MESSAGE(state, { payload }) {
 			const { messages } = state;
+			let newMessages: IMessage[]  = concat(messages, payload);
+			newMessages.sort((x,y)=> x.sendTs < y.sendTs? -1: 1);
 			return {
 				...state,
-				messages: concat(messages, payload)
+				messages: newMessages
 			};
+		},
+		LOGIN_ONCE(state, { }) {
+			storage.local.set('hasLoginedOnce', true);
+			return {
+				...state,
+				hasLoginedOnce: true
+			}
 		}
 	},
 	subscriptions: {
-		init({ dispatch, history }) {
-			dispatch({ type: 'app/STATE', payload: { user: storage.local.get('user') } });
-
+		initIM({ dispatch, history }) {
 			const onLoginOrReloginSuccessCB = () => {
 				dispatch({
 					type: 'STATE',
@@ -160,7 +167,7 @@ export default {
 			const onTransBufferCB = (msg) => {
 				dispatch({
 					type: 'MESSAGE',
-					payload: msg
+					payload: format(msg, chatMessageRule)
 				});
 			};
 			const onTransErrorCB = (params) => {
@@ -184,11 +191,29 @@ export default {
 					messagesBeReceivedCB
 				}
 			});
-			setTimeout(() => {
-				dispatch({
-					type: 'signin'
-				});
-			}, 500);
+
+			const hasLoginedOnce = storage.local.get('hasLoginedOnce');
+			if(hasLoginedOnce) {
+				setTimeout(() => {
+					dispatch({
+						type: 'signin',
+						payload: {
+							autoLogin: true,
+							callBack: (code)=>{
+								if(code.toString() === '0'){
+								  dispatch({
+									type: 'LOGIN_ONCE',
+								  });
+								}else {
+								  Toast.hide();
+								  Toast.fail('login failed, please try again.');
+								  router.push('/account');
+								}
+							  }
+						}
+					});
+				}, 500);
+			}
 		}
 	}
 };

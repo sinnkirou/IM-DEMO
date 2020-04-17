@@ -1,35 +1,37 @@
-import { List, ListView, SearchBar, WhiteSpace } from 'antd-mobile';
+import { List, ListView, SearchBar, WhiteSpace, Toast } from 'antd-mobile';
+import { connect } from 'dva';
 import React from 'react';
 import { Sticky, StickyContainer } from 'react-sticky';
 import { router } from 'umi';
+import { IAppState } from '@/models/app';
 
 const { Item } = List;
 
-const users: {
-	[propName: string]: Array<{ id: number; nickname: string; spell: string }>;
-} = {
-	L: [
-		{
-			id: 4,
-			nickname: '李四',
-			spell: 'lisi'
-		}
-	],
-	W: [
-		{
-			id: 5,
-			nickname: '王五',
-			spell: 'wangwu'
-		}
-	],
-	Z: [
-		{
-			id: 3,
-			nickname: '张三',
-			spell: 'zhangsan'
-		}
-	]
-};
+// const users: {
+// 	[propName: string]: Array<{ id: number; nickname: string; spell: string }>;
+// } = {
+// 	L: [
+// 		{
+// 			id: 4,
+// 			nickname: '李四',
+// 			spell: 'lisi'
+// 		}
+// 	],
+// 	W: [
+// 		{
+// 			id: 5,
+// 			nickname: '王五',
+// 			spell: 'wangwu'
+// 		}
+// 	],
+// 	Z: [
+// 		{
+// 			id: 3,
+// 			nickname: '张三',
+// 			spell: 'zhangsan'
+// 		}
+// 	]
+// };
 
 function genData(ds, provinceData) {
 	const dataBlob = {};
@@ -48,11 +50,21 @@ function genData(ds, provinceData) {
 	return ds.cloneWithRowsAndSections(dataBlob, sectionIDs, rowIDs);
 }
 
-class Index extends React.Component {
+interface IContactList {
+	[propName: string]: Array<{ id: number; nickname: string; spell: string }>;
+  }
+
+interface IProps extends IConnectProps {
+	app: IAppState
+}
+
+@connect(({ app, }) => ({ app,}))
+class Index extends React.Component<IProps> {
 	public state: {
 		inputValue?: string;
 		dataSource: any;
 		isLoading: boolean;
+		contactList: IContactList;
 	} = {
 		dataSource: null,
 		isLoading: true
@@ -77,16 +89,31 @@ class Index extends React.Component {
 		};
 	}
 
-	public componentDidMount() {
-		// simulate initial Ajax
-		this.setState({
-			dataSource: genData(this.state.dataSource, users),
-			isLoading: false
+	componentWillMount() {
+		const { app: { contacts } } = this.props;
+		const contactList: IContactList = {};
+		
+        contacts.forEach(item => {
+          // pending spell...
+          const spell = item.nickname || '';
+          const key = spell.substring(0, 1).toUpperCase();
+          const value = contactList[key] || [];
+          value.push({
+            ...item,
+            spell,
+          });
+          contactList[key] = value;
 		});
+		
+		this.setState({
+			dataSource: genData(this.state.dataSource, contactList),
+			isLoading: false,
+			contactList
+		  });
 	}
 
 	public onSearch = (val) => {
-		const pd = { ...users };
+		const pd = { ...this.state.contactList };
 		Object.keys(pd).forEach((item) => {
 			const arr = pd[item].filter((jj) => jj.spell.toLocaleLowerCase().indexOf(val) > -1);
 			if (!arr.length) {
@@ -146,14 +173,17 @@ class Index extends React.Component {
 					renderRow={(rowData, sectionID, rowID) => (
 						<Item
 							onClick={() => {
-								const section = users[sectionID] || [];
+								const { contactList } = this.state;
+								const section = contactList[sectionID] || [];
 								const user = section.find((d) => d.id === rowID);
-								router.push({
-									pathname: '/chat',
-									query: {
-										targetId: user.id
-									}
-								});
+								if(user) {
+									router.push({
+										pathname: '/home/chat',
+										query: {
+											targetId: user.id
+										}
+									});
+								}
 							}}
 						>
 							{rowData}

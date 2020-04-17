@@ -24,7 +24,12 @@ export default {
             importWorkboxFrom: 'local',
           },
         },
-        hd: true,
+        hd: {
+          px2rem: {
+            rootValue: 100,
+            minPixelValue: 2,
+          },
+        },
         routes: {
           exclude: [],
         },

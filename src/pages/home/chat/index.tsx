@@ -1,7 +1,7 @@
 import AudioPlaying from '@/components/AudioPlaying';
 import BizIcon from '@/components/BizIcon';
 import Swiper from '@/components/Swiper';
-import { IAppState } from '@/models/app';
+import { IAppState, IUser } from '@/models/app';
 import { IMessage, IMState, IMessageBase } from '@/models/im';
 import {
   ActivityIndicator,
@@ -86,11 +86,6 @@ enum DataType {
   IMAGE = 'IMAGE',
   AUDIO = 'AUDIO',
   FILE = 'FILE',
-}
-
-interface IUser {
-  id: string;
-  username: string;
 }
 
 interface IState {
@@ -187,30 +182,21 @@ class Index extends PureComponent<IProps> {
     dispatch({
       type: 'im/syncMessages',
       payload: {
-        targetId,
+        fromUserId: user.id,
+        toUserId: targetId, 
         page: 1
       },
     }).catch(Toast.fail);
-    dispatch({
-      type: 'app/getUserInfo',
-      payload: {
-        ids: targetId,
+
+    const { contacts } = this.props.app;
+    const targetUser = contacts.find(i => String(i.id) === String(targetId)) || {};
+    this.setState({
+      targetUser,
+      currentUser: {
+        username: get(user, 'nickname'),
+        id: get(user, 'id'),
       },
-    })
-      .then(data => {
-        const { nickName, email } = data[0];
-        this.setState({
-          targetUser: {
-            username: nickName,
-            id: targetId,
-          },
-          currentUser: {
-            username: get(user, 'nickname'),
-            id: get(user, 'id'),
-          },
-        });
-      })
-      .catch(Toast.fail);
+    });
   }
 
   public scrollIntoLatest = () => {
@@ -310,7 +296,7 @@ class Index extends PureComponent<IProps> {
         onLeftClick={router.goBack}
         key="title"
       >
-        {targetUser.username}
+        {targetUser.nickname}
       </NavBar>
     );
   };
@@ -335,13 +321,11 @@ class Index extends PureComponent<IProps> {
     setTimeout(() => this.scrollIntoLatest(), 200);
   };
 
-  public emitCallback = ({ code, message }) => {
-    Toast.fail(message);
-  };
-
   public onSendMessage = () => {
-    const { form, dispatch } = this.props;
-    const { targetUser, currentUser } = this.state;
+    const { form, dispatch, location: {
+      query: { targetId },
+    }, } = this.props;
+    const { currentUser } = this.state;
     // deviceHelper.setSoftKeyboardVisible(false);
     form.validateFields((error, values) => {
       if (!error) {
@@ -350,7 +334,7 @@ class Index extends PureComponent<IProps> {
         const message: IMessageBase = {
           dataContent: inputMessage,
           from: currentUser.id,
-          to: targetUser.id,
+          to: targetId,
         };
         dispatch({
           type: 'im/send',
@@ -539,7 +523,7 @@ class Index extends PureComponent<IProps> {
           {!isOwn && <BizIcon type="icon-test" className={styles.userIcon} />}
 
           <Flex direction="column" align={isOwn ? 'end' : 'start'}>
-            <span className={styles.from}>{currentUser.username ? currentUser.username : ''}</span>
+            <span className={styles.from}>{currentUser.nickname ? currentUser.nickname : ''}</span>
             {dataType === DataType.TEXT && (
               <span className={`messageItem ${isOwn ? styles.ownMessage : styles.otherMessage}`}>
                 {item.dataContent}
@@ -579,8 +563,8 @@ class Index extends PureComponent<IProps> {
             (userImageSrc ? (
               <img src={userImageSrc} alt="head" className={styles.roundIcon} />
             ) : (
-              <BizIcon type="icon-test" className={styles.userIcon} />
-            ))}
+                <BizIcon type="icon-test" className={styles.userIcon} />
+              ))}
         </Flex>
         <WhiteSpace />
       </div>
@@ -665,13 +649,13 @@ class Index extends PureComponent<IProps> {
               }}
             />
           ) : (
-            <BizIcon
-              type="wenzishuru"
-              onClick={() => {
-                this.toggleTarget('input');
-              }}
-            />
-          )}
+              <BizIcon
+                type="wenzishuru"
+                onClick={() => {
+                  this.toggleTarget('input');
+                }}
+              />
+            )}
           <form
             action=""
             onSubmit={e => {
@@ -701,7 +685,7 @@ class Index extends PureComponent<IProps> {
                   const emojiHeight = document.getElementsByClassName('slider-slide')[0]
                     .clientHeight;
                   this.setState({ emojiHeight });
-                } catch {}
+                } catch { }
               }, 500);
             }}
           />
@@ -709,13 +693,13 @@ class Index extends PureComponent<IProps> {
           {this.isDirty() ? (
             <BizIcon type="send" onClick={this.onSendMessage} />
           ) : (
-            <BizIcon
-              type="plus-circle"
-              onClick={() => {
-                this.toggleTarget('multiple');
-              }}
-            />
-          )}
+              <BizIcon
+                type="plus-circle"
+                onClick={() => {
+                  this.toggleTarget('multiple');
+                }}
+              />
+            )}
         </div>
         {toggleTarget === 'multiple' && (
           <div className={styles.multiplePanel}>

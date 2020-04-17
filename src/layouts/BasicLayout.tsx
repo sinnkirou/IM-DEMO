@@ -2,7 +2,7 @@
  * @Author: Jan-superman 
  * @Date: 2018-09-27 20:38:14 
  * @Last Modified by: mikey.zhaopeng
- * @Last Modified time: 2020-04-16 15:49:02
+ * @Last Modified time: 2020-04-17 11:39:56
  */
 
 import MenuBar, { tabBarData } from '@/components/MenuBar';
@@ -40,12 +40,12 @@ class BasicLayout extends PureComponent<IProps> {
     }
 
     if(linkStatus === false) {
-      Toast.offline('Network connection failed.');
+      Toast.offline('Network connection failed.', 10, null, false);
     }
     if(loginStatus === false) {
-      Toast.fail('Log in failed.');
+      Toast.fail('Log in failed.', 10, null, false);
     }
-
+    
     const BarRoutes = tabBarData.map(i => i.link);
     if (BarRoutes.indexOf(location.pathname) < 0) {
       return <>{children}</>;

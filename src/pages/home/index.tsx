@@ -1,15 +1,18 @@
 import { connect } from 'dva';
-import React, { PureComponent } from 'react';
+import React, { useEffect } from 'react';
+import { Toast } from 'antd-mobile';
+import { Redirect } from 'umi';
 
-@connect()
-class Index extends PureComponent<{
-  [propName: string]: any;
-}> {
+const Index = (props: IConnectProps) => {
+  useEffect(()=> {
+    props.dispatch({
+			type: 'app/getUserInfo',
+		  })
+			.catch(Toast.fail);
+  }, []) 
+
+  return <Redirect to="/home/setting" />
+};
 
 
-  public render() {
-    return <div>Home</div>;
-  }
-}
-
-export default Index;
+export default connect()(Index);

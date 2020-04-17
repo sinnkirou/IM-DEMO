@@ -23,13 +23,24 @@ class Index extends PureComponent<{
             password,
           },
         })
-          .then(result => {
-            console.debug(result);
+          .then(() => {
             dispatch({
               type: 'im/signin',
-            })
-            Toast.hide();
-            router.push('/home');
+              payload: {
+                callBack: (code)=>{
+                  if(code.toString() === '0'){
+                    Toast.hide();
+                    dispatch({
+                      type: 'im/LOGIN_ONCE',
+                    });
+                    router.push('/home');
+                  }else {
+                    Toast.hide();
+                    Toast.fail('login failed, please try again.');
+                  }
+                }
+              }
+            });
           })
           .catch(Toast.fail);
       }

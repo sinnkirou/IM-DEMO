@@ -22,7 +22,7 @@ export function userLogin(params) {
           name: 'email'
         }, {
           name: 'token'
-        }])
+        }]);
         resolve(res);
       })
       .catch(reject);
@@ -53,6 +53,14 @@ export function getUserInfo(params) {
       baseURL: USER_URL
     })
       .then(res => {
+        res.data = format(res.data, [{
+          name: 'nickName',
+          rename: 'nickname'
+        }, {
+          name: 'id'
+        }, {
+          name: 'email'
+        }])
         resolve(res);
       })
       .catch(reject);

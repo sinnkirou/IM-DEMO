@@ -2,7 +2,7 @@
  * @Author: Jan-superman 
  * @Date: 2018-10-09 15:37:17 
  * @Last Modified by: mikey.zhaopeng
- * @Last Modified time: 2020-04-14 16:02:38
+ * @Last Modified time: 2020-04-17 14:00:44
  */
 
 import React, { PureComponent } from 'react';
@@ -23,13 +23,13 @@ export const tabBarData = [
     title: '联系人',
     icon: 'ContactDetails',
     selectedIcon: 'ContactDetails',
-    link: '/contact',
+    link: '/home/contact',
   },
   {
     title: '我',
     icon: 'wo',
     selectedIcon: 'wo',
-    link: '/setting',
+    link: '/home/setting',
   },
 ];
 
