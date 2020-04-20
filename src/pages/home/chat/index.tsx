@@ -162,11 +162,11 @@ class Index extends PureComponent<IProps> {
       app: { user },
     } = props;
     const filteredMessages = messages.filter(
-      (i: IMessage) => String(i.from) === String(user.id) || String(i.from) === String(targetId)
+      (i: IMessage) =>
+        (String(i.to) === String(user.id) && String(i.from) === String(targetId)) ||
+        (String(i.to) === String(targetId) && String(i.from) === String(user.id))
     );
-    return {
-      messages: filteredMessages,
-    };
+    return { messages: filteredMessages };
   }
 
   public componentDidMount() {
@@ -183,8 +183,8 @@ class Index extends PureComponent<IProps> {
       type: 'im/syncMessages',
       payload: {
         fromUserId: user.id,
-        toUserId: targetId, 
-        page: 1
+        toUserId: targetId,
+        page: 1,
       },
     }).catch(Toast.fail);
 
@@ -192,10 +192,7 @@ class Index extends PureComponent<IProps> {
     const targetUser = contacts.find(i => String(i.id) === String(targetId)) || {};
     this.setState({
       targetUser,
-      currentUser: {
-        username: get(user, 'nickname'),
-        id: get(user, 'id'),
-      },
+      currentUser: user,
     });
   }
 
@@ -305,15 +302,11 @@ class Index extends PureComponent<IProps> {
     const { dispatch } = this.props;
     const newMessage = {
       ...message,
-      fp: uuid(),
       sendTs: moment().format('YYYY-MM-DD HH:mm:ss'),
     };
     dispatch({
       type: 'im/MESSAGE',
-      payload: {
-        ...newMessage,
-        sentSuccess: true,
-      },
+      payload: newMessage,
     });
     this.setState({
       toggleTarget: 'input',
@@ -322,9 +315,13 @@ class Index extends PureComponent<IProps> {
   };
 
   public onSendMessage = () => {
-    const { form, dispatch, location: {
-      query: { targetId },
-    }, } = this.props;
+    const {
+      form,
+      dispatch,
+      location: {
+        query: { targetId },
+      },
+    } = this.props;
     const { currentUser } = this.state;
     // deviceHelper.setSoftKeyboardVisible(false);
     form.validateFields((error, values) => {
@@ -335,6 +332,7 @@ class Index extends PureComponent<IProps> {
           dataContent: inputMessage,
           from: currentUser.id,
           to: targetId,
+          fp: uuid(),
         };
         dispatch({
           type: 'im/send',
@@ -498,7 +496,7 @@ class Index extends PureComponent<IProps> {
   public generateRow = (item: IMessage) => {
     if (isEmpty(item)) return null;
     const { userImageSrc, playingItem, audioDurations } = this.state;
-    const { currentUser } = this.state;
+    const { targetUser, currentUser } = this.state;
     const isOwn = String(item.from) === String(currentUser.id);
     const dataType = this.getDataType(item.dataContent);
     // if (item.type === 'audio') {
@@ -506,6 +504,7 @@ class Index extends PureComponent<IProps> {
     // } else if (item.type === 'image') {
     //   this.imageIds.push(item.id);
     // }
+    // console.debug(item.dataContent, item.sentSuccess)
     return (
       <div key={item.fp} id={item.fp} className={styles.mssageRow}>
         {this.shouldShowTimeStamp(item) && (
@@ -523,48 +522,52 @@ class Index extends PureComponent<IProps> {
           {!isOwn && <BizIcon type="icon-test" className={styles.userIcon} />}
 
           <Flex direction="column" align={isOwn ? 'end' : 'start'}>
-            <span className={styles.from}>{currentUser.nickname ? currentUser.nickname : ''}</span>
-            {dataType === DataType.TEXT && (
-              <span className={`messageItem ${isOwn ? styles.ownMessage : styles.otherMessage}`}>
-                {item.dataContent}
-              </span>
-            )}
-            {dataType === DataType.IMAGE && (
-              <img
-                className={`messageItem ${styles.messageImg}`}
-                src={item.dataContent}
-                alt="img"
-                onClick={() => {
-                  this.setState({
-                    toggleSwipe: true,
-                    curImageId: item.fp,
-                  });
-                }}
-              />
-            )}
-            {dataType === DataType.AUDIO && (
-              <span
-                className={`messageItem ${isOwn ? styles.ownMessage : styles.otherMessage}`}
-                onClick={() => {
-                  // this.playAudio(item);
-                }}
-                style={{ width: `${this.getAudioWidth(item.dataContent)}rem` }}
-                id={item.dataContent}
-              >
-                <Flex>
-                  {`${audioDurations[item.dataContent]}''`}
-                  {<AudioPlaying isPlaying={playingItem === item.fp} />}{' '}
-                </Flex>
-              </span>
-            )}
+            <span className={styles.from}>{(isOwn? currentUser.nickname: targetUser.nickname) || ''}</span>
+            <Flex>
+              {item.sentSuccess === undefined && <ActivityIndicator />}
+              {item.sentSuccess === false && <BizIcon type="reload" />}
+              {dataType === DataType.TEXT && (
+                <span className={`messageItem ${isOwn ? styles.ownMessage : styles.otherMessage}`}>
+                  {item.dataContent}
+                </span>
+              )}
+              {dataType === DataType.IMAGE && (
+                <img
+                  className={`messageItem ${styles.messageImg}`}
+                  src={item.dataContent}
+                  alt="img"
+                  onClick={() => {
+                    this.setState({
+                      toggleSwipe: true,
+                      curImageId: item.fp,
+                    });
+                  }}
+                />
+              )}
+              {dataType === DataType.AUDIO && (
+                <span
+                  className={`messageItem ${isOwn ? styles.ownMessage : styles.otherMessage}`}
+                  onClick={() => {
+                    // this.playAudio(item);
+                  }}
+                  style={{ width: `${this.getAudioWidth(item.dataContent)}rem` }}
+                  id={item.dataContent}
+                >
+                  <Flex>
+                    {`${audioDurations[item.dataContent]}''`}
+                    {<AudioPlaying isPlaying={playingItem === item.fp} />}{' '}
+                  </Flex>
+                </span>
+              )}
+            </Flex>
           </Flex>
 
           {isOwn &&
             (userImageSrc ? (
               <img src={userImageSrc} alt="head" className={styles.roundIcon} />
             ) : (
-                <BizIcon type="icon-test" className={styles.userIcon} />
-              ))}
+              <BizIcon type="icon-test" className={styles.userIcon} />
+            ))}
         </Flex>
         <WhiteSpace />
       </div>
@@ -649,13 +652,13 @@ class Index extends PureComponent<IProps> {
               }}
             />
           ) : (
-              <BizIcon
-                type="wenzishuru"
-                onClick={() => {
-                  this.toggleTarget('input');
-                }}
-              />
-            )}
+            <BizIcon
+              type="wenzishuru"
+              onClick={() => {
+                this.toggleTarget('input');
+              }}
+            />
+          )}
           <form
             action=""
             onSubmit={e => {
@@ -685,7 +688,7 @@ class Index extends PureComponent<IProps> {
                   const emojiHeight = document.getElementsByClassName('slider-slide')[0]
                     .clientHeight;
                   this.setState({ emojiHeight });
-                } catch { }
+                } catch {}
               }, 500);
             }}
           />
@@ -693,13 +696,13 @@ class Index extends PureComponent<IProps> {
           {this.isDirty() ? (
             <BizIcon type="send" onClick={this.onSendMessage} />
           ) : (
-              <BizIcon
-                type="plus-circle"
-                onClick={() => {
-                  this.toggleTarget('multiple');
-                }}
-              />
-            )}
+            <BizIcon
+              type="plus-circle"
+              onClick={() => {
+                this.toggleTarget('multiple');
+              }}
+            />
+          )}
         </div>
         {toggleTarget === 'multiple' && (
           <div className={styles.multiplePanel}>

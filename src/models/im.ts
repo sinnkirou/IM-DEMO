@@ -4,11 +4,14 @@ import { syncMessages } from '@/servers/message';
 import { WS_URL } from '@/utils/config';
 import storage from '@/utils/storage';
 import concat from 'lodash/concat';
+import uniqBy from 'lodash/uniqBy';
+import cloneDeep from 'lodash/cloneDeep';
 import Manager from '../../shurui-im-sdk/src/index';
 import format from '@/utils/format';
 import { chatMessageRule } from '@/utils/formatRules';
 
 export interface IMessageBase {
+	fp: string;
 	from: string;
 	to: string;
 	dataContent: string;
@@ -109,7 +112,11 @@ export default {
 			if (!success) {
 				throw message;
 			} else {
-				const { records } = data;
+				let { records } = data;
+				records = records.map((i:IMessage)=> ({
+					...i,
+					sentSuccess: true,
+				}))
 				yield put({
 					type: 'MESSAGE',
 					payload: records
@@ -124,7 +131,8 @@ export default {
 		MESSAGE(state, { payload }) {
 			const { messages } = state;
 			let newMessages: IMessage[]  = concat(messages, payload);
-			newMessages.sort((x,y)=> x.sendTs < y.sendTs? -1: 1);
+			newMessages = newMessages.sort((x,y)=> x.sendTs < y.sendTs? -1: 1);
+			newMessages = uniqBy(newMessages, 'fp');
 			return {
 				...state,
 				messages: newMessages
@@ -136,6 +144,17 @@ export default {
 				...state,
 				hasLoginedOnce: true
 			}
+		},
+		MESSAGE_SENT(state, { payload }) {
+			const { messages } = state;
+			const targetMessage: IMessage = messages.find((i: IMessage) => String(i.fp) === String(payload.fp));
+			if (targetMessage) {
+				targetMessage.sentSuccess = true;
+			}
+			return {
+				...state,
+				messages: cloneDeep(messages)
+			};
 		}
 	},
 	subscriptions: {
@@ -144,7 +163,8 @@ export default {
 				dispatch({
 					type: 'STATE',
 					payload: {
-						loginStatus: true
+						loginStatus: true,
+						linkStatus: true
 					}
 				});
 			};
@@ -178,6 +198,12 @@ export default {
 			};
 			const messagesBeReceivedCB = (fp: string) => {
 				console.debug('message received: ', fp);
+				dispatch({
+					type: 'MESSAGE_SENT',
+					payload: {
+						fp
+					}
+				})
 			};
 			dispatch({
 				type: 'init',
