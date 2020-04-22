@@ -1,5 +1,5 @@
 import get from 'lodash/get';
-import { BASE_URL } from '@/utils/config';
+import { IM_URL, BASE_URL } from '@/utils/config';
 import request from '@/utils/request';
 import format from '@/utils/format';
 import { chatMessageRule } from '@/utils/formatRules';
@@ -10,7 +10,7 @@ export function syncMessages(params) {
       method: 'get',
       url: '/messages',
       params,
-      baseURL: BASE_URL,
+      baseURL: IM_URL,
     })
       .then(res => {
         if(get(res, 'data.records')) {

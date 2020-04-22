@@ -1,7 +1,6 @@
 import config from '../../config/config';
 
+export const IM_URL = config.context.IM_URL;
 export const BASE_URL = config.context.BASE_URL;
-export const USER_URL = config.context.USER_URL;
-export const FILE_RUL = config.context.FILE_RUL;
 export const WS_URL = config.context.WS_URL;
 

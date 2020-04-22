@@ -28,6 +28,7 @@ interface IRCForm {
     ) => any;
     getFieldError: (filedName: string) => string;
     getFieldValue: (filedName: string) => string;
+    getFieldDecorator: (filedName: string, options?: any) => any;
   };
 }
 
@@ -51,3 +52,7 @@ interface IConnectProps {
 }
 
 interface IConnectFormProps extends IConnectProps, IRCForm {}
+
+interface Window {
+  webkitURL: string;
+}

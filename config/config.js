@@ -66,9 +66,8 @@ export default {
     '@': path.resolve(__dirname, 'src'),
   },
   context: {
-    BASE_URL: 'http://192.168.198.212:6888',
-    USER_URL: 'http://192.168.198.212:6889',
-    FILE_RUL: 'http://192.168.198.227:8050',
+    IM_URL: 'http://192.168.198.212:6888',
+    BASE_URL: 'http://192.168.198.212:6889',
     WS_URL: 'ws://192.168.198.212:7901/ws',
     UPLOAD: {
       maxLen: 5,

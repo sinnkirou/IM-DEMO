@@ -1,4 +1,4 @@
-import { USER_URL } from '@/utils/config';
+import { BASE_URL } from '@/utils/config';
 import format from '@/utils/format';
 import request from '@/utils/request';
 
@@ -8,7 +8,7 @@ export function userLogin(params) {
       method: 'post',
       url: '/user/login',
       data: params,
-      baseURL: USER_URL,
+      baseURL: BASE_URL,
     })
       .then(res => {
         res.data = format(res.data, [{
@@ -35,7 +35,7 @@ export function userRegister(params) {
       method: 'post',
       url: '/user',
       data: params,
-      baseURL: USER_URL
+      baseURL: BASE_URL
     })
       .then(res => {
         resolve(res);
@@ -50,7 +50,7 @@ export function getUserInfo(params) {
       method: 'get',
       url: '/user/info',
       params,
-      baseURL: USER_URL
+      baseURL: BASE_URL
     })
       .then(res => {
         res.data = format(res.data, [{

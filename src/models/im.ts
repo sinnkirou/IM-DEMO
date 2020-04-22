@@ -1,12 +1,14 @@
 import { Toast } from 'antd-mobile';
 import router from 'umi/router';
 import { syncMessages } from '@/servers/message';
+import { fileDownload, fileUpload } from '@/servers/file';
 import { WS_URL } from '@/utils/config';
 import storage from '@/utils/storage';
 import concat from 'lodash/concat';
 import uniqBy from 'lodash/uniqBy';
 import cloneDeep from 'lodash/cloneDeep';
-import Manager from '../../shurui-im-sdk/src/index';
+import Manager from '../../../shurui-im-sdk/src/index';
+// import Manager from 'srt-im-sdk';
 import format from '@/utils/format';
 import { chatMessageRule } from '@/utils/formatRules';
 
@@ -109,30 +111,50 @@ export default {
 				...payload,
 				pageSize: pageSize || 10
 			});
+			let records: IMessage[] = [];
 			if (!success) {
 				throw message;
 			} else {
-				let { records } = data;
-				records = records.map((i:IMessage)=> ({
-					...i,
-					sentSuccess: true,
-				}))
+				records = data.records;
+				records = records.map((i)=> ({
+						...i,
+						sentSuccess: true,
+				}));
 				yield put({
-					type: 'MESSAGE',
+					type: 'INSERT_MESSAGE',
 					payload: records
 				});
 			}
+		},
+		*fileUpload({ payload }, { call, put}) {
+			const { message, success, data } =  yield call(fileUpload, payload);
+			if(!success) {
+				throw message;
+			}else{
+				return data;
+			}
+		},
+		*fileDownload({ payload }, { call, put }) {
+			return yield call(fileDownload, payload);
 		}
 	},
 	reducers: {
 		STATE(state, { payload }) {
 			return { ...state, ...payload };
 		},
-		MESSAGE(state, { payload }) {
+		INSERT_MESSAGE(state, { payload }) {
 			const { messages } = state;
 			let newMessages: IMessage[]  = concat(messages, payload);
+			newMessages = newMessages.map((item)=> {
+				const fpArray = item.fp.split('|');
+				return {
+					...item,
+					fp: fpArray[fpArray.length-1]
+				}
+			});
 			newMessages = newMessages.sort((x,y)=> x.sendTs < y.sendTs? -1: 1);
 			newMessages = uniqBy(newMessages, 'fp');
+			// console.debug(newMessages);
 			return {
 				...state,
 				messages: newMessages
@@ -145,12 +167,18 @@ export default {
 				hasLoginedOnce: true
 			}
 		},
-		MESSAGE_SENT(state, { payload }) {
-			const { messages } = state;
-			const targetMessage: IMessage = messages.find((i: IMessage) => String(i.fp) === String(payload.fp));
-			if (targetMessage) {
-				targetMessage.sentSuccess = true;
+		MESSAGE_UPDATE(state, { payload }) {
+			let messages: IMessage[] = state.messages;
+			const targetMessageIndex: number = messages.findIndex((i: IMessage) => String(i.fp) === String(payload.fp));
+			if (targetMessageIndex > -1) {
+				const targetMessage:IMessage =  messages.find((i: IMessage) => String(i.fp) === String(payload.fp));
+				let newMessage = {
+					...targetMessage,
+					...payload
+				};
+				messages.splice(targetMessageIndex, 1, newMessage);
 			}
+			console.debug(messages);
 			return {
 				...state,
 				messages: cloneDeep(messages)
@@ -186,7 +214,7 @@ export default {
 			};
 			const onTransBufferCB = (msg) => {
 				dispatch({
-					type: 'MESSAGE',
+					type: 'INSERT_MESSAGE',
 					payload: format(msg, chatMessageRule)
 				});
 			};
@@ -199,9 +227,10 @@ export default {
 			const messagesBeReceivedCB = (fp: string) => {
 				console.debug('message received: ', fp);
 				dispatch({
-					type: 'MESSAGE_SENT',
+					type: 'MESSAGE_UPDATE',
 					payload: {
-						fp
+						fp,
+						sentSuccess: true
 					}
 				})
 			};

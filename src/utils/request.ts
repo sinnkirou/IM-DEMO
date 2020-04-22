@@ -1,5 +1,5 @@
 // https://github.com/axios/axios config 详情
-import { BASE_URL } from '@/utils/config';
+import { IM_URL } from '@/utils/config';
 import axios, { AxiosPromise, AxiosRequestConfig, AxiosResponse } from 'axios';
 import _ from 'lodash';
 import router from 'umi/router';
@@ -16,7 +16,7 @@ import storage from './storage';
  * @param {Object} options [请求参数]
  */
 function request(options: AxiosRequestConfig): AxiosPromise {
-  const defaultOptions = { baseURL: BASE_URL };
+  const defaultOptions = { baseURL: IM_URL };
   const params = { ...options.params };
   if (options) {
     options.headers = { 'x-user-token': storage.cookie.get('token') };

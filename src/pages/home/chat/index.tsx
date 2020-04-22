@@ -14,79 +14,29 @@ import {
   PullToRefresh,
   Toast,
   WhiteSpace,
+  Modal,
 } from 'antd-mobile';
 import { connect } from 'dva';
 import Hammer from 'hammerjs';
-import get from 'lodash/get';
 import isEmpty from 'lodash/isEmpty';
+import get from 'lodash/get';
 import moment from 'moment';
 import { createForm } from 'rc-form';
 import React, { PureComponent } from 'react';
 import router from 'umi/router';
 import { v1 as uuid } from 'uuid';
-// import Manager from 'srt-im-sdk';
 import styles from './index.less';
+import {
+  IFile,
+  DataType,
+  getDataType,
+  setFileMsgContent,
+  getFile,
+  getFileURL,
+} from '@/utils/imFileUtil';
+import emojis from '@/json/emojis.json';
 
-const emojis = [
-  '😀',
-  '😃',
-  '😄',
-  '😁',
-  '😆',
-  '😅',
-  '🤣',
-  '😂',
-  '🙂',
-  '🙃',
-  '😉',
-  '😊',
-  '😇',
-  '😍',
-  '🤩',
-  '😘',
-  '😗',
-  '😚',
-  '😙',
-  '😋',
-  '😛',
-  '😜',
-  '🤪',
-  '😝',
-  '🤑',
-  '🤗',
-  '🤭',
-  '🤫',
-  '🤔',
-  '🤐',
-  '🤨',
-  '😐',
-  '😑',
-  '😶',
-  '😏',
-  '😒',
-  '🙄',
-  '😬',
-  '🤥',
-  '😌',
-  '😔',
-  '😪',
-  '🤤',
-  '😴',
-  '😷',
-  '🤒',
-  '🤕',
-  '🤢',
-  '🤮',
-  '🤧',
-];
 const emojiData = emojis.map(emoji => ({ text: emoji }));
-
-enum DataType {
-  TEXT = 'TEXT',
-  IMAGE = 'IMAGE',
-  AUDIO = 'AUDIO',
-  FILE = 'FILE',
-}
 
 interface IState {
   refreshing: boolean;
@@ -126,6 +76,9 @@ class Index extends PureComponent<IProps> {
   public imageIds = null;
   public scrollView = null;
   public inputMessage = null;
+  public filePickerRef = null;
+  public imagePickerRef = null;
+  public cameraPickerRef = null;
 
   public state: IState = {
     refreshing: false,
@@ -170,7 +123,6 @@ class Index extends PureComponent<IProps> {
   }
 
   public componentDidMount() {
-    this.scrollIntoLatest();
     this.handleGesture();
     const {
       location: {
@@ -186,22 +138,89 @@ class Index extends PureComponent<IProps> {
         toUserId: targetId,
         page: 1,
       },
-    }).catch(Toast.fail);
+    })
+      .then(() => {
+        const { contacts } = this.props.app;
+        const targetUser = contacts.find(i => String(i.id) === String(targetId)) || {};
+        this.setState({
+          targetUser,
+          currentUser: user,
+        });
+        this.scrollIntoLatest();
+      })
+      .catch(Toast.fail);
 
-    const { contacts } = this.props.app;
-    const targetUser = contacts.find(i => String(i.id) === String(targetId)) || {};
-    this.setState({
-      targetUser,
-      currentUser: user,
-    });
   }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (this.state.messages.length !== prevState.messages.length) {
+      this.state.messages.forEach(item => {
+        const type = getDataType(item.fp, item.dataContent);
+        if (type === DataType.IMAGE) {
+          this.downLoadFile(item);
+        }
+      });
+      setTimeout(() => {
+        this.scrollIntoLatest();
+      }, 1000);
+    }
+  }
+
+  public downLoadFile = (msg: IMessage, download: boolean = false) => {
+    const dataType = getDataType(msg.fp, msg.dataContent);
+    const file = getFile(dataType, msg.fp, msg.dataContent);
+    if (file.url.indexOf('blob') >= 0) return;
+
+    if (download) {
+      Toast.loading('loading', 0);
+    }
+    this.props
+      .dispatch({
+        type: 'im/fileDownload',
+        payload: {
+          key: file.url,
+        },
+      })
+      .then(res => {
+        const blob = res;
+        if (download) {
+          const reader = new FileReader();
+          reader.readAsDataURL(blob);
+          reader.onload = function(e) {
+            const a = document.createElement('a');
+            a.download = file.name;
+            a.href = e.target.result;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            Toast.hide();
+          };
+        } else {
+          const URL = window.URL || window.webkitURL;
+          const blobUrl = URL.createObjectURL(blob);
+          this.props.dispatch({
+            type: 'im/MESSAGE_UPDATE',
+            payload: {
+              fp: msg.fp,
+              dataContent: setFileMsgContent(file.name, DataType.IMAGE, msg.fp, blobUrl),
+            },
+          });
+        }
+      });
+  };
 
   public scrollIntoLatest = () => {
     setTimeout(() => {
       if (this.scrollView) {
-        this.scrollView.scrollTo(0, 12000);
+        let height = 12000;
+        const listBody = document.getElementsByClassName('list-view-section-body');
+        if(listBody && listBody[0]) {
+          height = listBody[0].clientHeight;
+        }
+        console.debug(height);
+        this.scrollView.scrollTo(0, height);
       }
-    }, 200);
+    }, 500);
   };
 
   public handleGesture = () => {
@@ -246,44 +265,6 @@ class Index extends PureComponent<IProps> {
     );
   };
 
-  // initClient = () => {
-  //   this.options = {
-  //     wsUrl: 'ws://192.168.198.202:7901/ws',
-  //     chatBaseCB: {
-  //       onLoginOrReloginSuccessCB: () => {
-  //         console.log('登陆成功');
-  //       },
-  //       onLoginOrReloginFailCB: () => {
-  //         console.log('登陆失败');
-  //       },
-  //       onLinkCloseMessageCB: () => {
-  //         console.log('连接失败');
-  //       },
-  //     },
-  //     chatTransDataCB: {
-  //       onTransBufferCB: params => {
-  //         const { dataContent } = params;
-  //         console.log(params);
-  //         this.appendMessage({ dataContent: dataContent, isOwn: false });
-  //       },
-  //       onTransErrorCB: params => {
-  //         console.log(params);
-  //       },
-  //     },
-  //     messageQoSCB: {
-  //       handleMessageLost: params => {
-  //         console.log(params);
-  //       },
-  //       messagesBeReceivedCB: params => {
-  //         console.log(params);
-  //       },
-  //     },
-  //   };
-  //   setTimeout(() => {
-  //     // Manager.getInstance().login('1', 'token', 'test');
-  //   }, 1000);
-  // };
-
   public renderTitle = () => {
     const { targetUser } = this.state;
     return (
@@ -304,14 +285,15 @@ class Index extends PureComponent<IProps> {
       ...message,
       sendTs: moment().format('YYYY-MM-DD HH:mm:ss'),
     };
+    console.debug(newMessage);
     dispatch({
-      type: 'im/MESSAGE',
+      type: 'im/INSERT_MESSAGE',
       payload: newMessage,
     });
     this.setState({
       toggleTarget: 'input',
     });
-    setTimeout(() => this.scrollIntoLatest(), 200);
+    this.scrollIntoLatest();
   };
 
   public onSendMessage = () => {
@@ -482,29 +464,20 @@ class Index extends PureComponent<IProps> {
     return audioDurations[src] ? audioDurations[src] / 10 + 3 : 0;
   };
 
-  public getDataType = (dataContent: string) => {
-    switch (dataContent) {
-      case '[image]':
-        return DataType.IMAGE;
-      case '[audio]':
-        return DataType.AUDIO;
-      default:
-        return DataType.TEXT;
-    }
-  };
-
   public generateRow = (item: IMessage) => {
     if (isEmpty(item)) return null;
     const { userImageSrc, playingItem, audioDurations } = this.state;
     const { targetUser, currentUser } = this.state;
     const isOwn = String(item.from) === String(currentUser.id);
-    const dataType = this.getDataType(item.dataContent);
-    // if (item.type === 'audio') {
-    //   // this.setDuration(item.dataContent);
-    // } else if (item.type === 'image') {
-    //   this.imageIds.push(item.id);
-    // }
-    // console.debug(item.dataContent, item.sentSuccess)
+    const dataType = getDataType(item.fp, item.dataContent);
+    const file: IFile = getFile(dataType, item.fp, item.dataContent);
+
+    if (dataType === DataType.IMAGE.toString()) {
+      this.imageIds.push(item.fp);
+      console.debug(item, file);
+    } else if (dataType === DataType.AUDIO.toString()) {
+      // this.setDuration(item.dataContent);
+    }
     return (
       <div key={item.fp} id={item.fp} className={styles.mssageRow}>
         {this.shouldShowTimeStamp(item) && (
@@ -522,10 +495,12 @@ class Index extends PureComponent<IProps> {
           {!isOwn && <BizIcon type="icon-test" className={styles.userIcon} />}
 
           <Flex direction="column" align={isOwn ? 'end' : 'start'}>
-            <span className={styles.from}>{(isOwn? currentUser.nickname: targetUser.nickname) || ''}</span>
-            <Flex>
-              {item.sentSuccess === undefined && <ActivityIndicator />}
-              {item.sentSuccess === false && <BizIcon type="reload" />}
+            <span className={styles.from}>
+              {(isOwn ? currentUser.nickname : targetUser.nickname) || ''}
+            </span>
+            <Flex direction="row" justify={isOwn ? 'end' : 'start'}>
+              {isOwn && item.sentSuccess === undefined && <ActivityIndicator />}
+              {isOwn && item.sentSuccess === false && <BizIcon type="reload" />}
               {dataType === DataType.TEXT && (
                 <span className={`messageItem ${isOwn ? styles.ownMessage : styles.otherMessage}`}>
                   {item.dataContent}
@@ -534,7 +509,7 @@ class Index extends PureComponent<IProps> {
               {dataType === DataType.IMAGE && (
                 <img
                   className={`messageItem ${styles.messageImg}`}
-                  src={item.dataContent}
+                  src={file.url}
                   alt="img"
                   onClick={() => {
                     this.setState({
@@ -544,19 +519,39 @@ class Index extends PureComponent<IProps> {
                   }}
                 />
               )}
-              {dataType === DataType.AUDIO && (
+              {dataType === DataType.AUDIO.toString() && (
                 <span
                   className={`messageItem ${isOwn ? styles.ownMessage : styles.otherMessage}`}
                   onClick={() => {
                     // this.playAudio(item);
                   }}
-                  style={{ width: `${this.getAudioWidth(item.dataContent)}rem` }}
+                  style={{ width: `${this.getAudioWidth(file.url)}rem` }}
                   id={item.dataContent}
                 >
                   <Flex>
                     {`${audioDurations[item.dataContent]}''`}
                     {<AudioPlaying isPlaying={playingItem === item.fp} />}{' '}
                   </Flex>
+                </span>
+              )}
+              {dataType === DataType.FILE.toString() && (
+                <span
+                  className={`messageItem ${isOwn ? styles.ownMessage : styles.otherMessage}`}
+                  onClick={() => {
+                    Modal.alert('Download', 'Are you sure?', [
+                      { text: 'Cancel' },
+                      {
+                        text: 'Ok',
+                        onPress: () => {
+                          this.downLoadFile(item, true);
+                        },
+                      },
+                    ]);
+                  }}
+                >
+                  {file.name}
+                  &nbsp;&nbsp;
+                  <BizIcon type="weizhiwenjian" style={{ fontSize: '0.5rem' }} />
                 </span>
               )}
             </Flex>
@@ -576,6 +571,7 @@ class Index extends PureComponent<IProps> {
 
   public renderChatBody = () => {
     const { refreshing, messages } = this.state;
+    console.debug(messages);
 
     return (
       <ListView
@@ -636,6 +632,59 @@ class Index extends PureComponent<IProps> {
     this.setState({ toggleTarget: 'input' });
   };
 
+  public onFileChange = (e, type: DataType) => {
+    const file = get(e, 'target.files[0]');
+    if (/image\/*/.test(file.type)) {
+      type = DataType.IMAGE;
+    }
+    console.debug(type);
+    if (file) {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      this.props
+        .dispatch({
+          type: 'im/fileUpload',
+          payload: formData,
+        })
+        .then(data => {
+          if (data) {
+            const { currentUser } = this.state;
+            const {
+              location: {
+                query: { targetId },
+              },
+            } = this.props;
+            const fp = uuid();
+            const message: IMessageBase = {
+              fp,
+              dataContent: setFileMsgContent(file.name, type, fp, data),
+              from: currentUser.id,
+              to: targetId,
+            };
+            this.props
+              .dispatch({
+                type: 'im/send',
+                payload: {
+                  message,
+                  handleSendResult: code => {
+                    console.debug(code);
+                    if (code === 0) {
+                      const fileUrl = getFileURL(file);
+                      this.appendMessage({
+                        ...message,
+                        dataContent: setFileMsgContent(file.name, type, fp, fileUrl),
+                      });
+                    }
+                  },
+                },
+              })
+              .catch(Toast.fail);
+          }
+        }).catch(Toast.fail);
+    }
+  };
+
   public renderChatInput = () => {
     const { form } = this.props;
     const { getFieldProps } = form;
@@ -669,7 +718,7 @@ class Index extends PureComponent<IProps> {
           >
             <InputItem
               {...getFieldProps('inputMessage', {
-                rules: [{ required: true, message: 'Please input something before sending' }],
+                rules: [{ whitespace: true, message: 'Empty is not allowed' }],
               })}
               placeholder={toggleTarget !== 'audio' ? 'Please input here...' : 'Hold to talk...'}
               disabled={toggleTarget === 'audio'}
@@ -706,9 +755,57 @@ class Index extends PureComponent<IProps> {
         </div>
         {toggleTarget === 'multiple' && (
           <div className={styles.multiplePanel}>
-            <BizIcon type="camera-fill" />
-            <BizIcon type="image-fill" />
-            <BizIcon type="folder-open-fill" onClick={this.onSendMessage} />
+            <BizIcon
+              type="camera-fill"
+              onClick={() => {
+                this.cameraPickerRef.click();
+              }}
+            />
+            <BizIcon
+              type="image-fill"
+              onClick={() => {
+                this.imagePickerRef.click();
+              }}
+            />
+            <BizIcon
+              type="folder-open-fill"
+              onClick={() => {
+                this.filePickerRef.click();
+              }}
+            />
+            <input
+              type="file"
+              ref={el => {
+                this.cameraPickerRef = el;
+              }}
+              accept="image/*"
+              capture="camera"
+              className={styles.hiddenInput}
+              onChange={e => {
+                this.onFileChange(e, DataType.IMAGE);
+              }}
+            />
+            <input
+              type="file"
+              ref={el => {
+                this.imagePickerRef = el;
+              }}
+              accept="image/*"
+              className={styles.hiddenInput}
+              onChange={e => {
+                this.onFileChange(e, DataType.IMAGE);
+              }}
+            />
+            <input
+              type="file"
+              ref={el => {
+                this.filePickerRef = el;
+              }}
+              className={styles.hiddenInput}
+              onChange={e => {
+                this.onFileChange(e, DataType.FILE);
+              }}
+            />
           </div>
         )}
         {toggleTarget === 'emoji' && (
@@ -747,8 +844,10 @@ class Index extends PureComponent<IProps> {
     const { toggleSwipe, curImageId, messages } = this.state;
     const imageURLs: string[] = [];
     messages.forEach(item => {
-      if (item.dataContent === '[image]') {
-        imageURLs.push(item.dataContent);
+      const type = getDataType(item.fp, item.dataContent);
+      if (type === DataType.IMAGE) {
+        const file = getFile(type, item.fp, item.dataContent);
+        imageURLs.push(file.url);
       }
     });
     const props = {

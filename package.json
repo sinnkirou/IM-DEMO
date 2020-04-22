@@ -30,12 +30,13 @@
     "moment": "^2.24.0",
     "nprogress": "^0.2.0",
     "prop-types": "^15.5.10",
-    "qs": "^6.5.2",
+    "qs": "^6.9.3",
     "rc-queue-anim": "^1.8.4",
     "react": "^16.5.1",
     "react-sticky": "^6.0.3",
     "swiper": "^5.3.7",
-    "uuid": "^7.0.3"
+    "uuid": "^7.0.3",
+    "webuploader": "^0.1.8"
   },
   "optionalDependencies": {
     "puppeteer": "^1.9.0"
