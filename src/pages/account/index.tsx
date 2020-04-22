@@ -3,11 +3,16 @@ import { connect } from 'dva';
 import { createForm } from 'rc-form';
 import React, { PureComponent } from 'react';
 import router from 'umi/router';
+import storage from '@/utils/storage';
 
 @connect()
-class Index extends PureComponent<{
-  [propName: string]: any;
-}> {
+class Index extends PureComponent<IConnectFormProps> {
+
+  public componentDidMount() {
+    if(storage.cookie.get('token')) {
+      router.push('home');
+    }
+  }
 
   public signIn = () => {
     const { form } = this.props;

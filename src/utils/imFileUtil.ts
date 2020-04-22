@@ -1,5 +1,7 @@
 export interface IFile {
+	fp: string;
 	name: string;
+	type: string;
 	url: string;
 }
 
@@ -10,29 +12,20 @@ export enum DataType {
 	FILE = 'FILE'
 }
 
-export const getDataType = (fp: string, dataContent: string) => {
-	if (dataContent.indexOf(setFileMsgContent('', DataType.IMAGE, fp, '')) > -1) {
-		return DataType.IMAGE;
-	} else if (dataContent.indexOf(setFileMsgContent('', DataType.FILE, fp, '')) > -1) {
-		return DataType.FILE;
-	} else if (dataContent.indexOf(setFileMsgContent('', DataType.AUDIO, fp, '')) > -1) {
-		return DataType.AUDIO;
-	}
-	return DataType.TEXT;
-};
+export const setFileMsgContent = (fileName: string, type: DataType, fp: string, fileUrl: string) =>
+	`${fp}|${fileName}|${type}|${fileUrl}`;
 
-export const setFileMsgContent = (fileName: string, type: DataType, fp: string, fileUrl: any) =>
-	`${fileName}-${type}-${fp}:${fileUrl}`;
-
-export const getFile = (type: DataType, fp: string, dataContent: string): IFile => {
-	const pattern = `-${type}-${fp}:`;
+export const getFile = (dataContent: string): IFile => {
+	const paramArray = dataContent.split('|');
 	return {
-		name: dataContent.substring(0, dataContent.indexOf(pattern)),
-		url: dataContent.substring(dataContent.indexOf(pattern) + pattern.length)
+		fp: paramArray[0] || '',
+		name: paramArray[1] || '',
+		type: paramArray[2] || DataType.TEXT,
+		url: paramArray[3] || ''
 	};
 };
 
-export const getFileURL = (file) => {
+export const getLocalFileURL = (file) => {
 	let getUrl = null;
 	if (window.createObjectURL !== undefined) {
 		// basic

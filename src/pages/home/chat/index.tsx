@@ -4,14 +4,7 @@ import Swiper from '@/components/Swiper';
 import emojis from '@/json/emojis.json';
 import { IAppState, IUser } from '@/models/app';
 import { IMessage, IMessageBase, IMState } from '@/models/im';
-import {
-  DataType,
-  getDataType,
-  getFile,
-  getFileURL,
-  IFile,
-  setFileMsgContent,
-} from '@/utils/imFileUtil';
+import { DataType, getFile, getLocalFileURL, IFile, setFileMsgContent } from '@/utils/imFileUtil';
 import {
   ActivityIndicator,
   Flex,
@@ -50,7 +43,6 @@ interface IState {
   audioDurations?: object;
   playingItem?: string;
   toggleTarget?: 'emoji' | 'audio' | 'multiple' | 'input';
-  emojiHeight?: number;
   currentUser: IUser;
   targetUser: IUser;
   messages: IMessage[];
@@ -91,7 +83,6 @@ class Index extends PureComponent<IProps> {
     curImageId: null,
     recording: false,
     audioDurations: {},
-    emojiHeight: 0,
     currentUser: {},
     targetUser: {},
     messages: [],
@@ -121,6 +112,7 @@ class Index extends PureComponent<IProps> {
       currentUser: user,
     });
     this.getMessages();
+    this.scrollIntoLatest();
   }
 
   public static getDerivedStateFromProps(props: IProps, state: IState) {
@@ -142,24 +134,45 @@ class Index extends PureComponent<IProps> {
   public componentDidUpdate(prevProps, prevState) {
     if (this.state.messages.length !== prevState.messages.length) {
       this.state.messages.forEach(item => {
-        const type = getDataType(item.fp, item.dataContent);
+        const { type } = getFile(item.dataContent);
         if (type === DataType.IMAGE) {
-          this.downLoadFile(item);
+          this.loadOrDownloadFile(item);
         }
       });
       this.scrollIntoLatest();
     }
   }
 
-  public downLoadFile = (msg: IMessage, download: boolean = false) => {
-    const dataType = getDataType(msg.fp, msg.dataContent);
-    const file = getFile(dataType, msg.fp, msg.dataContent);
-    if (file.url.indexOf('blob') >= 0) {
-      return;
+  public loadOrDownloadFile = (msg: IMessage, isDownload: boolean = false) => {
+    const download = (blobUrl: string) => {
+      const a = document.createElement('a');
+      a.download = file.name;
+      a.href = blobUrl;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
     }
+    const downloadWithBlobOrUrl = (blob: Blob|string) => {
+      if (typeof blob !== 'string') {
+        const reader = new FileReader();
+        reader.readAsDataURL(blob as Blob);
+        reader.onload = e => {
+          download(e.target.result);
+          Toast.hide();
+        };
+      } else {
+        download(blob);
+        Toast.hide();
+      }
+    };
 
-    if (download) {
+    if (isDownload) {
       Toast.loading('loading', 0);
+    }
+    const file = getFile(msg.dataContent);
+    if (file.url.indexOf('blob') >= 0) {
+      if (isDownload) { downloadWithBlobOrUrl(file.url); }
+      return;
     }
     this.props
       .dispatch({
@@ -168,20 +181,10 @@ class Index extends PureComponent<IProps> {
           key: file.url,
         },
       })
-      .then(res => {
+      .then((res: Blob) => {
         const blob = res;
-        if (download) {
-          const reader = new FileReader();
-          reader.readAsDataURL(blob);
-          reader.onload = e => {
-            const a = document.createElement('a');
-            a.download = file.name;
-            a.href = e.target.result;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            Toast.hide();
-          };
+        if (isDownload) {
+          downloadWithBlobOrUrl(blob);
         } else {
           const URL = window.URL || window.webkitURL;
           const blobUrl = URL.createObjectURL(blob);
@@ -340,11 +343,7 @@ class Index extends PureComponent<IProps> {
         toUserId: targetId,
         page: page || 1,
       },
-    })
-      .then(() => {
-        
-      })
-      .catch(Toast.fail);
+    }).catch(Toast.fail);
   };
 
   public onRefresh = () => {
@@ -472,13 +471,12 @@ class Index extends PureComponent<IProps> {
     const { userImageSrc, playingItem, audioDurations } = this.state;
     const { targetUser, currentUser } = this.state;
     const isOwn = String(item.from) === String(currentUser.id);
-    const dataType = getDataType(item.fp, item.dataContent);
-    const file: IFile = getFile(dataType, item.fp, item.dataContent);
+    const file: IFile = getFile(item.dataContent);
 
-    if (dataType === DataType.IMAGE.toString()) {
-      this.imageIds.push(item.fp);
+    if (file.type === DataType.IMAGE.toString()) {
+      // this.imageIds.push(item.fp);
       // console.debug(item, file);
-    } else if (dataType === DataType.AUDIO.toString()) {
+    } else if (file.type === DataType.AUDIO.toString()) {
       // this.setDuration(item.dataContent);
     }
     return (
@@ -503,12 +501,12 @@ class Index extends PureComponent<IProps> {
             <Flex direction="row" justify={isOwn ? 'end' : 'start'}>
               {isOwn && item.sentSuccess === undefined && <ActivityIndicator />}
               {isOwn && item.sentSuccess === false && <BizIcon type="reload" />}
-              {dataType === DataType.TEXT && (
+              {file.type === DataType.TEXT && (
                 <span className={`messageItem ${isOwn ? styles.ownMessage : styles.otherMessage}`}>
                   {item.dataContent}
                 </span>
               )}
-              {dataType === DataType.IMAGE && (
+              {file.type === DataType.IMAGE && (
                 <img
                   className={`messageItem ${styles.messageImg}`}
                   src={file.url}
@@ -521,7 +519,7 @@ class Index extends PureComponent<IProps> {
                   }}
                 />
               )}
-              {dataType === DataType.AUDIO.toString() && (
+              {file.type === DataType.AUDIO.toString() && (
                 <span
                   className={`messageItem ${isOwn ? styles.ownMessage : styles.otherMessage}`}
                   onClick={() => {
@@ -536,7 +534,7 @@ class Index extends PureComponent<IProps> {
                   </Flex>
                 </span>
               )}
-              {dataType === DataType.FILE.toString() && (
+              {file.type === DataType.FILE.toString() && (
                 <span
                   className={`messageItem ${isOwn ? styles.ownMessage : styles.otherMessage}`}
                   onClick={() => {
@@ -545,7 +543,7 @@ class Index extends PureComponent<IProps> {
                       {
                         text: 'Ok',
                         onPress: () => {
-                          this.downLoadFile(item, true);
+                          this.loadOrDownloadFile(item, true);
                         },
                       },
                     ]);
@@ -645,7 +643,7 @@ class Index extends PureComponent<IProps> {
                   handleSendResult: code => {
                     // console.debug(code);
                     if (code === 0) {
-                      const fileUrl = getFileURL(file);
+                      const fileUrl = getLocalFileURL(file);
                       this.appendMessage({
                         ...message,
                         dataContent: setFileMsgContent(file.name, type, fp, fileUrl),
@@ -664,7 +662,7 @@ class Index extends PureComponent<IProps> {
   public renderChatInput = () => {
     const { form } = this.props;
     const { getFieldProps } = form;
-    const { toggleTarget, emojiHeight } = this.state;
+    const { toggleTarget, } = this.state;
 
     return (
       <div className={styles.toolPanel} key="toolPanel">
@@ -711,17 +709,22 @@ class Index extends PureComponent<IProps> {
             onClick={() => {
               this.toggleTarget('emoji');
               setTimeout(() => {
-                try {
-                  const emojiHeight = document.getElementsByClassName('slider-slide')[0]
-                    .clientHeight;
-                  this.setState({ emojiHeight });
-                } catch {}
-              }, 500);
+                this.forceUpdate();
+              }, 0);
             }}
           />
           &nbsp;
           {this.isDirty() ? (
-            <BizIcon type="send" onClick={this.onSendMessage} />
+            <BizIcon
+              type="send"
+              onClick={e => {
+                e.preventDefault();
+                this.onSendMessage();
+                if (document.getElementsByTagName('input')) {
+                  document.getElementsByTagName('input')[0].blur();
+                }
+              }}
+            />
           ) : (
             <BizIcon
               type="plus-circle"
@@ -788,11 +791,11 @@ class Index extends PureComponent<IProps> {
         )}
         {toggleTarget === 'emoji' && (
           <Grid
-            style={{ height: emojiHeight }}
             data={emojiData}
             columnNum={8}
             carouselMaxRow={4}
             isCarousel={true}
+            hasLine={false}
             onClick={item => {
               const {
                 form: { setFieldsValue, getFieldValue },
@@ -821,11 +824,12 @@ class Index extends PureComponent<IProps> {
   public renderSwiper = () => {
     const { toggleSwipe, curImageId, messages } = this.state;
     const imageURLs: string[] = [];
+    this.imageIds = [];
     messages.forEach(item => {
-      const type = getDataType(item.fp, item.dataContent);
-      if (type === DataType.IMAGE) {
-        const file = getFile(type, item.fp, item.dataContent);
+      const file = getFile(item.dataContent);
+      if (file.type === DataType.IMAGE) {
         imageURLs.push(file.url);
+        this.imageIds.push(file.fp);
       }
     });
     const props = {
