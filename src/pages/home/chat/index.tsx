@@ -39,7 +39,7 @@ import styles from './index.less';
 const emojiData = emojis.map(emoji => ({ text: emoji }));
 
 interface IState {
-  refreshing: boolean;
+  pullRefreshing: boolean;
   page: number;
   total: number;
   lastTimeStamps?: object;
@@ -71,22 +71,6 @@ interface IProps extends IConnectFormProps {
   im,
 }))
 class Index extends PureComponent<IProps> {
-
-  public static getDerivedStateFromProps(props: IProps, state: IState) {
-    const {
-      location: {
-        query: { targetId },
-      },
-      im: { messages },
-      app: { user },
-    } = props;
-    const filteredMessages = messages.filter(
-      (i: IMessage) =>
-        (String(i.to) === String(user.id) && String(i.from) === String(targetId)) ||
-        (String(i.to) === String(targetId) && String(i.from) === String(user.id))
-    );
-    return { messages: filteredMessages };
-  }
   public dataSource = null;
   public audios = null;
   public imageIds = null;
@@ -97,8 +81,8 @@ class Index extends PureComponent<IProps> {
   public cameraPickerRef = null;
 
   public state: IState = {
-    refreshing: false,
-    page: 0,
+    pullRefreshing: false,
+    page: 1,
     total: 100,
     lastTimeStamps: {},
     userImageSrc: null,
@@ -129,27 +113,30 @@ class Index extends PureComponent<IProps> {
         query: { targetId },
       },
       app: { user },
-      dispatch,
     } = this.props;
-    dispatch({
-      type: 'im/syncMessages',
-      payload: {
-        fromUserId: user.id,
-        toUserId: targetId,
-        page: 1,
-      },
-    })
-      .then(() => {
-        const { contacts } = this.props.app;
-        const targetUser = contacts.find(i => String(i.id) === String(targetId)) || {};
-        this.setState({
-          targetUser,
-          currentUser: user,
-        });
-        this.scrollIntoLatest();
-      })
-      .catch(Toast.fail);
+    const { contacts } = this.props.app;
+    const targetUser = contacts.find(i => String(i.id) === String(targetId)) || {};
+    this.setState({
+      targetUser,
+      currentUser: user,
+    });
+    this.getMessages();
+  }
 
+  public static getDerivedStateFromProps(props: IProps, state: IState) {
+    const {
+      location: {
+        query: { targetId },
+      },
+      im: { messages },
+      app: { user },
+    } = props;
+    const filteredMessages = messages.filter(
+      (i: IMessage) =>
+        (String(i.to) === String(user.id) && String(i.from) === String(targetId)) ||
+        (String(i.to) === String(targetId) && String(i.from) === String(user.id))
+    );
+    return { messages: filteredMessages };
   }
 
   public componentDidUpdate(prevProps, prevState) {
@@ -160,16 +147,16 @@ class Index extends PureComponent<IProps> {
           this.downLoadFile(item);
         }
       });
-      setTimeout(() => {
-        this.scrollIntoLatest();
-      }, 1000);
+      this.scrollIntoLatest();
     }
   }
 
   public downLoadFile = (msg: IMessage, download: boolean = false) => {
     const dataType = getDataType(msg.fp, msg.dataContent);
     const file = getFile(dataType, msg.fp, msg.dataContent);
-    if (file.url.indexOf('blob') >= 0) { return; }
+    if (file.url.indexOf('blob') >= 0) {
+      return;
+    }
 
     if (download) {
       Toast.loading('loading', 0);
@@ -186,7 +173,7 @@ class Index extends PureComponent<IProps> {
         if (download) {
           const reader = new FileReader();
           reader.readAsDataURL(blob);
-          reader.onload = (e)=> {
+          reader.onload = e => {
             const a = document.createElement('a');
             a.download = file.name;
             a.href = e.target.result;
@@ -207,20 +194,6 @@ class Index extends PureComponent<IProps> {
           });
         }
       });
-  };
-
-  public scrollIntoLatest = () => {
-    setTimeout(() => {
-      if (this.scrollView) {
-        let height = 12000;
-        const listBody = document.getElementsByClassName('list-view-section-body');
-        if(listBody && listBody[0]) {
-          height = listBody[0].clientHeight;
-        }
-        console.debug(height);
-        this.scrollView.scrollTo(0, height);
-      }
-    }, 500);
   };
 
   public handleGesture = () => {
@@ -285,7 +258,7 @@ class Index extends PureComponent<IProps> {
       ...message,
       sendTs: moment().format('YYYY-MM-DD HH:mm:ss'),
     };
-    console.debug(newMessage);
+    // console.debug(newMessage);
     dispatch({
       type: 'im/INSERT_MESSAGE',
       payload: newMessage,
@@ -305,11 +278,9 @@ class Index extends PureComponent<IProps> {
       },
     } = this.props;
     const { currentUser } = this.state;
-    // deviceHelper.setSoftKeyboardVisible(false);
     form.validateFields((error, values) => {
       if (!error) {
         const { inputMessage } = values;
-        // this.appendMessage({ dataContent: inputMessage, from: currentUser.id, to: targetUser.id });
         const message: IMessageBase = {
           dataContent: inputMessage,
           from: currentUser.id,
@@ -321,7 +292,7 @@ class Index extends PureComponent<IProps> {
           payload: {
             message,
             handleSendResult: code => {
-              console.debug(code);
+              // console.debug(code);
               if (code === 0) {
                 this.appendMessage(message);
               }
@@ -334,29 +305,59 @@ class Index extends PureComponent<IProps> {
     });
   };
 
+  public scrollIntoLatest = () => {
+    const { pullRefreshing } = this.state;
+    if (pullRefreshing) {
+      this.setState({ pullRefreshing: false });
+      return;
+    }
+    setTimeout(() => {
+      if (this.scrollView) {
+        let height = 1000000;
+        // const listBody = document.getElementsByClassName('list-view-section-body');
+        // if (listBody && listBody[0]) {
+        //   height = listBody[0].clientHeight;
+        // }
+        // console.debug('scrollHeight___________', height);
+        this.scrollView.scrollTo(0, height);
+      }
+    }, 1000);
+  };
+
+  public getMessages = () => {
+    const {
+      location: {
+        query: { targetId },
+      },
+      app: { user },
+      dispatch,
+    } = this.props;
+    const { page } = this.state;
+    dispatch({
+      type: 'im/syncMessages',
+      payload: {
+        fromUserId: user.id,
+        toUserId: targetId,
+        page: page || 1,
+      },
+    })
+      .then(() => {
+        
+      })
+      .catch(Toast.fail);
+  };
+
   public onRefresh = () => {
-    const { refreshing, page, total, messages } = this.state;
+    const { page, messages } = this.state;
+    const {
+      im: { total },
+    } = this.props;
     if (messages.length >= total) {
       return;
     }
-    const newMessages: IMessage[] = [
-      {
-        dataContent: "I'm new refreshed",
-        from: '2',
-        to: '1',
-        fp: uuid(),
-        sendTs: moment()
-          .subtract(Math.round(Math.random() * 19), 'months')
-          .format('YYYY-MM-DD HH:mm:ss'),
-      },
-    ]
-      .concat(messages)
-      .sort((x, y) => (moment(y.sendTs).isAfter(moment(x.sendTs)) ? -1 : 1));
-    // this.setState({
-    //   messages: newMessages,
-    //   refreshing: false,
-    //   page: refreshing ? page + 1 : 0,
-    // });
+    this.setState({ pullRefreshing: true, page: page + 1 }, () => {
+      this.getMessages();
+    });
   };
 
   public shouldShowTimeStamp = (messgae: IMessage) => {
@@ -465,7 +466,9 @@ class Index extends PureComponent<IProps> {
   };
 
   public generateRow = (item: IMessage) => {
-    if (isEmpty(item)) { return null; }
+    if (isEmpty(item)) {
+      return null;
+    }
     const { userImageSrc, playingItem, audioDurations } = this.state;
     const { targetUser, currentUser } = this.state;
     const isOwn = String(item.from) === String(currentUser.id);
@@ -474,7 +477,7 @@ class Index extends PureComponent<IProps> {
 
     if (dataType === DataType.IMAGE.toString()) {
       this.imageIds.push(item.fp);
-      console.debug(item, file);
+      // console.debug(item, file);
     } else if (dataType === DataType.AUDIO.toString()) {
       // this.setDuration(item.dataContent);
     }
@@ -569,8 +572,8 @@ class Index extends PureComponent<IProps> {
   };
 
   public renderChatBody = () => {
-    const { refreshing, messages } = this.state;
-    console.debug(messages);
+    const { pullRefreshing, messages } = this.state;
+    // console.debug(messages);
 
     return (
       <ListView
@@ -578,8 +581,8 @@ class Index extends PureComponent<IProps> {
         dataSource={this.dataSource.cloneWithRows(messages)}
         renderRow={this.generateRow}
         className={styles.scrollList}
-        pullToRefresh={<PullToRefresh refreshing={refreshing} onRefresh={this.onRefresh} />}
-        initialListSize={20}
+        pullToRefresh={<PullToRefresh refreshing={pullRefreshing} onRefresh={this.onRefresh} />}
+        initialListSize={10}
         ref={el => {
           this.scrollView = el;
         }}
@@ -592,33 +595,6 @@ class Index extends PureComponent<IProps> {
     const inputValue = form.getFieldValue('inputMessage');
     return !!inputValue;
   };
-
-  // onCameraSuccess = imageURL => {
-  //   logger.info(`onCameraSuccess:_____________________${imageURL}`);
-  //   const userImageSrc = `data:image/jpeg;base64,${imageURL}`;
-  //   this.appendMessage({ dataContent: userImageSrc, type: 'image' });
-  // };
-
-  // onCameraError = e => {
-  //   logger.error(`onCameraError: ${JSON.stringify(e)}`, e);
-  //   // Toast.fail('something goes wrong');
-  // };
-
-  // takePhoto = () => {
-  //   const cameraOptions = {
-  //     ...getDefaultCameraOptions(),
-  //     quality: 100,
-  //   };
-  //   cameraUtil.takePhoto(this.onCameraSuccess, this.onCameraError, cameraOptions);
-  // };
-
-  // takeFromGallery = () => {
-  //   const cameraOptions = {
-  //     ...getDefaultPhotoOptions(),
-  //     quality: 100,
-  //   };
-  //   cameraUtil.takeFromGallery(this.onCameraSuccess, this.onCameraError, cameraOptions);
-  // };
 
   public toggleTarget = (target: 'emoji' | 'audio' | 'multiple' | 'input') => {
     const { toggleTarget } = this.state;
@@ -636,7 +612,7 @@ class Index extends PureComponent<IProps> {
     if (/image\/*/.test(file.type)) {
       type = DataType.IMAGE;
     }
-    console.debug(type);
+    // console.debug(type);
     if (file) {
       const formData = new FormData();
       formData.append('file', file);
@@ -667,7 +643,7 @@ class Index extends PureComponent<IProps> {
                 payload: {
                   message,
                   handleSendResult: code => {
-                    console.debug(code);
+                    // console.debug(code);
                     if (code === 0) {
                       const fileUrl = getFileURL(file);
                       this.appendMessage({
@@ -680,7 +656,8 @@ class Index extends PureComponent<IProps> {
               })
               .catch(Toast.fail);
           }
-        }).catch(Toast.fail);
+        })
+        .catch(Toast.fail);
     }
   };
 
@@ -712,12 +689,14 @@ class Index extends PureComponent<IProps> {
             onSubmit={e => {
               e.preventDefault();
               this.onSendMessage();
-              // deviceHelper.handleSoftSubmit(e, this.onSendMessage);
             }}
           >
             <InputItem
               {...getFieldProps('inputMessage', {
-                rules: [{ whitespace: true, message: 'Empty is not allowed' }],
+                rules: [
+                  { whitespace: true, message: 'Empty is not allowed' },
+                  { required: true, message: 'message is required' },
+                ],
               })}
               placeholder={toggleTarget !== 'audio' ? 'Please input here...' : 'Hold to talk...'}
               disabled={toggleTarget === 'audio'}

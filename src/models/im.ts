@@ -10,7 +10,7 @@ import concat from 'lodash/concat';
 import uniqBy from 'lodash/uniqBy';
 import router from 'umi/router';
 // import Manager from 'srt-im-sdk';
-import Manager from '../../../shurui-im-sdk/src/index';
+import Manager, { WSOptions } from '../../../shurui-im-sdk/src/index';
 
 export interface IMessageBase {
 	fp: string;
@@ -31,12 +31,14 @@ export interface IMState {
 	linkStatus: boolean;
 	messages: IMessage[];
 	hasLoginedOnce?: boolean;
+	total: number;
 }
 
 const defState: IMState = {
 	loginStatus: undefined,
 	linkStatus: undefined,
-	messages: []
+	messages: [],
+	total: 0,
 };
 export default {
 	namespace: 'im',
@@ -52,7 +54,7 @@ export default {
 				handleMessageLost,
 				messagesBeReceivedCB
 			} = payload;
-			const options = {
+			const options: WSOptions = {
 				wsUrl: WS_URL,
 				chatBaseCB: {
 					onLoginOrReloginSuccessCB,
@@ -74,10 +76,8 @@ export default {
 		*signin({ payload }, { call, put, select }) {
 			const { callBack, autoLogin } = payload;
 			const hasLoginedOnce = storage.local.get('hasLoginedOnce');
-			console.debug('autoLogin', autoLogin, 'hasLoginedOnce', hasLoginedOnce);
 			if (!autoLogin || (autoLogin && hasLoginedOnce)) {
 				const { id, token } = storage.local.get('user');
-				console.debug('id', id, 'token', token);
 				if (id && token) {
 					Manager.getInstance().login(id, token, 'test', null, (code) => {
 						if (callBack) { callBack(code); }
@@ -124,6 +124,12 @@ export default {
 					type: 'INSERT_MESSAGE',
 					payload: records
 				});
+				yield put({
+					type: 'STATE',
+					payload: {
+						total: data.total
+					}
+				})
 			}
 		},
 		*fileUpload({ payload }, { call, put}) {
@@ -142,7 +148,7 @@ export default {
 		STATE(state, { payload }) {
 			return { ...state, ...payload };
 		},
-		INSERT_MESSAGE(state, { payload }) {
+		INSERT_MESSAGE(state: IMState, { payload }) {
 			const { messages } = state;
 			let newMessages: IMessage[]  = concat(messages, payload);
 			newMessages = newMessages.map((item)=> {
@@ -154,10 +160,11 @@ export default {
 			});
 			newMessages = newMessages.sort((x,y)=> x.sendTs < y.sendTs? -1: 1);
 			newMessages = uniqBy(newMessages, 'fp');
-			// console.debug(newMessages);
+			const insertedNumber = newMessages.length - messages.length;
 			return {
 				...state,
-				messages: newMessages
+				messages: newMessages,
+				total: state.total + insertedNumber
 			};
 		},
 		LOGIN_ONCE(state, { }) {
@@ -167,7 +174,7 @@ export default {
 				hasLoginedOnce: true
 			}
 		},
-		MESSAGE_UPDATE(state, { payload }) {
+		MESSAGE_UPDATE(state: IMState, { payload }) {
 			const messages: IMessage[] = state.messages;
 			const targetMessageIndex: number = messages.findIndex((i: IMessage) => String(i.fp) === String(payload.fp));
 			if (targetMessageIndex > -1) {
@@ -178,7 +185,6 @@ export default {
 				};
 				messages.splice(targetMessageIndex, 1, newMessage);
 			}
-			console.debug(messages);
 			return {
 				...state,
 				messages: cloneDeep(messages)
@@ -215,17 +221,27 @@ export default {
 			const onTransBufferCB = (msg) => {
 				dispatch({
 					type: 'INSERT_MESSAGE',
-					payload: format(msg, chatMessageRule)
+					payload: {
+						...format(msg, chatMessageRule),
+						sentSuccess: true,
+					}
 				});
 			};
 			const onTransErrorCB = (params) => {
 				console.warn(params);
 			};
-			const handleMessageLost = (lostMsgs: object[]) => {
-				console.debug(lostMsgs);
+			const handleMessageLost = (lostMsgs: IMessage[]) => {
+				lostMsgs.forEach(msg=> {
+					dispatch({
+						type: 'MESSAGE_UPDATE',
+						payload: {
+							fp: msg.fp,
+							sentSuccess: false
+						}
+					})
+				})
 			};
 			const messagesBeReceivedCB = (fp: string) => {
-				console.debug('message received: ', fp);
 				dispatch({
 					type: 'MESSAGE_UPDATE',
 					payload: {

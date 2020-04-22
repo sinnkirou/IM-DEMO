@@ -54,7 +54,7 @@ interface IConnectProps {
 interface IConnectFormProps extends IConnectProps, IRCForm {}
 
 interface Window {
-  webkitURL: string;
+  webkitURL: any;
 }
 
 interface EventTarget {
