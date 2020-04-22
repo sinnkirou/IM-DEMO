@@ -12,6 +12,10 @@
   },
   "linterOptions": {
     "exclude": [
+      "src/utils/request.ts",
+      "src/utils/requestPlus.ts",
+      "src/utils/format.ts",
+      "src/utils/storage.ts"
     ]
   }
 }

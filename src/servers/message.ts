@@ -1,8 +1,8 @@
-import get from 'lodash/get';
-import { IM_URL, BASE_URL } from '@/utils/config';
-import request from '@/utils/request';
+import { BASE_URL, IM_URL } from '@/utils/config';
 import format from '@/utils/format';
 import { chatMessageRule } from '@/utils/formatRules';
+import request from '@/utils/request';
+import get from 'lodash/get';
 
 export function syncMessages(params) {
   return new Promise((resolve, reject) => {

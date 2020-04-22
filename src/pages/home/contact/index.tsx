@@ -1,9 +1,9 @@
-import { List, ListView, SearchBar, WhiteSpace, Toast } from 'antd-mobile';
+import { IAppState } from '@/models/app';
+import { List, ListView, SearchBar, Toast, WhiteSpace } from 'antd-mobile';
 import { connect } from 'dva';
 import React from 'react';
 import { Sticky, StickyContainer } from 'react-sticky';
 import { router } from 'umi';
-import { IAppState } from '@/models/app';
 
 const { Item } = List;
 
@@ -89,7 +89,7 @@ class Index extends React.Component<IProps> {
 		};
 	}
 
-	componentWillMount() {
+	public componentWillMount() {
 		const { app: { contacts } } = this.props;
 		const contactList: IContactList = {};
 		

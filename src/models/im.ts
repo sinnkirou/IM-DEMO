@@ -1,16 +1,16 @@
-import { Toast } from 'antd-mobile';
-import router from 'umi/router';
-import { syncMessages } from '@/servers/message';
 import { fileDownload, fileUpload } from '@/servers/file';
+import { syncMessages } from '@/servers/message';
 import { WS_URL } from '@/utils/config';
-import storage from '@/utils/storage';
-import concat from 'lodash/concat';
-import uniqBy from 'lodash/uniqBy';
-import cloneDeep from 'lodash/cloneDeep';
-import Manager from '../../../shurui-im-sdk/src/index';
-// import Manager from 'srt-im-sdk';
 import format from '@/utils/format';
 import { chatMessageRule } from '@/utils/formatRules';
+import storage from '@/utils/storage';
+import { Toast } from 'antd-mobile';
+import cloneDeep from 'lodash/cloneDeep';
+import concat from 'lodash/concat';
+import uniqBy from 'lodash/uniqBy';
+import router from 'umi/router';
+// import Manager from 'srt-im-sdk';
+import Manager from '../../../shurui-im-sdk/src/index';
 
 export interface IMessageBase {
 	fp: string;
@@ -80,7 +80,7 @@ export default {
 				console.debug('id', id, 'token', token);
 				if (id && token) {
 					Manager.getInstance().login(id, token, 'test', null, (code) => {
-						if (callBack) callBack(code);
+						if (callBack) { callBack(code); }
 					});
 				}
 			}
@@ -168,11 +168,11 @@ export default {
 			}
 		},
 		MESSAGE_UPDATE(state, { payload }) {
-			let messages: IMessage[] = state.messages;
+			const messages: IMessage[] = state.messages;
 			const targetMessageIndex: number = messages.findIndex((i: IMessage) => String(i.fp) === String(payload.fp));
 			if (targetMessageIndex > -1) {
 				const targetMessage:IMessage =  messages.find((i: IMessage) => String(i.fp) === String(payload.fp));
-				let newMessage = {
+				const newMessage = {
 					...targetMessage,
 					...payload
 				};

@@ -1,8 +1,17 @@
 import AudioPlaying from '@/components/AudioPlaying';
 import BizIcon from '@/components/BizIcon';
 import Swiper from '@/components/Swiper';
+import emojis from '@/json/emojis.json';
 import { IAppState, IUser } from '@/models/app';
-import { IMessage, IMState, IMessageBase } from '@/models/im';
+import { IMessage, IMessageBase, IMState } from '@/models/im';
+import {
+  DataType,
+  getDataType,
+  getFile,
+  getFileURL,
+  IFile,
+  setFileMsgContent,
+} from '@/utils/imFileUtil';
 import {
   ActivityIndicator,
   Flex,
@@ -10,31 +19,22 @@ import {
   Icon,
   InputItem,
   ListView,
+  Modal,
   NavBar,
   PullToRefresh,
   Toast,
   WhiteSpace,
-  Modal,
 } from 'antd-mobile';
 import { connect } from 'dva';
 import Hammer from 'hammerjs';
-import isEmpty from 'lodash/isEmpty';
 import get from 'lodash/get';
+import isEmpty from 'lodash/isEmpty';
 import moment from 'moment';
 import { createForm } from 'rc-form';
 import React, { PureComponent } from 'react';
 import router from 'umi/router';
 import { v1 as uuid } from 'uuid';
 import styles from './index.less';
-import {
-  IFile,
-  DataType,
-  getDataType,
-  setFileMsgContent,
-  getFile,
-  getFileURL,
-} from '@/utils/imFileUtil';
-import emojis from '@/json/emojis.json';
 
 const emojiData = emojis.map(emoji => ({ text: emoji }));
 
@@ -71,6 +71,22 @@ interface IProps extends IConnectFormProps {
   im,
 }))
 class Index extends PureComponent<IProps> {
+
+  public static getDerivedStateFromProps(props: IProps, state: IState) {
+    const {
+      location: {
+        query: { targetId },
+      },
+      im: { messages },
+      app: { user },
+    } = props;
+    const filteredMessages = messages.filter(
+      (i: IMessage) =>
+        (String(i.to) === String(user.id) && String(i.from) === String(targetId)) ||
+        (String(i.to) === String(targetId) && String(i.from) === String(user.id))
+    );
+    return { messages: filteredMessages };
+  }
   public dataSource = null;
   public audios = null;
   public imageIds = null;
@@ -106,22 +122,6 @@ class Index extends PureComponent<IProps> {
     this.imageIds = [];
   }
 
-  static getDerivedStateFromProps(props: IProps, state: IState) {
-    const {
-      location: {
-        query: { targetId },
-      },
-      im: { messages },
-      app: { user },
-    } = props;
-    const filteredMessages = messages.filter(
-      (i: IMessage) =>
-        (String(i.to) === String(user.id) && String(i.from) === String(targetId)) ||
-        (String(i.to) === String(targetId) && String(i.from) === String(user.id))
-    );
-    return { messages: filteredMessages };
-  }
-
   public componentDidMount() {
     this.handleGesture();
     const {
@@ -152,7 +152,7 @@ class Index extends PureComponent<IProps> {
 
   }
 
-  componentDidUpdate(prevProps, prevState) {
+  public componentDidUpdate(prevProps, prevState) {
     if (this.state.messages.length !== prevState.messages.length) {
       this.state.messages.forEach(item => {
         const type = getDataType(item.fp, item.dataContent);
@@ -169,7 +169,7 @@ class Index extends PureComponent<IProps> {
   public downLoadFile = (msg: IMessage, download: boolean = false) => {
     const dataType = getDataType(msg.fp, msg.dataContent);
     const file = getFile(dataType, msg.fp, msg.dataContent);
-    if (file.url.indexOf('blob') >= 0) return;
+    if (file.url.indexOf('blob') >= 0) { return; }
 
     if (download) {
       Toast.loading('loading', 0);
@@ -186,7 +186,7 @@ class Index extends PureComponent<IProps> {
         if (download) {
           const reader = new FileReader();
           reader.readAsDataURL(blob);
-          reader.onload = function(e) {
+          reader.onload = (e)=> {
             const a = document.createElement('a');
             a.download = file.name;
             a.href = e.target.result;
@@ -465,7 +465,7 @@ class Index extends PureComponent<IProps> {
   };
 
   public generateRow = (item: IMessage) => {
-    if (isEmpty(item)) return null;
+    if (isEmpty(item)) { return null; }
     const { userImageSrc, playingItem, audioDurations } = this.state;
     const { targetUser, currentUser } = this.state;
     const isOwn = String(item.from) === String(currentUser.id);
@@ -490,7 +490,6 @@ class Index extends PureComponent<IProps> {
           </>
         )}
 
-        {/** messages **/}
         <Flex justify={isOwn ? 'end' : 'start'} align="start">
           {!isOwn && <BizIcon type="icon-test" className={styles.userIcon} />}
 

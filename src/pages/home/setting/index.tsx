@@ -1,11 +1,11 @@
 import BizIcon from '@/components/BizIcon';
+import { IAppState } from '@/models/app';
 import { Button, List, NavBar, WhiteSpace, WingBlank } from 'antd-mobile';
 import { connect } from 'dva';
 import React, { PureComponent } from 'react';
 import Link from 'umi/link';
 import router from 'umi/router';
 import styles from './index.less';
-import { IAppState } from '@/models/app';
 
 interface IProps extends IConnectProps {
   app: IAppState

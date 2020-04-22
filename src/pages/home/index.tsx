@@ -1,6 +1,6 @@
+import { Toast } from 'antd-mobile';
 import { connect } from 'dva';
 import React, { useEffect } from 'react';
-import { Toast } from 'antd-mobile';
 import { Redirect } from 'umi';
 
 const Index = (props: IConnectProps) => {

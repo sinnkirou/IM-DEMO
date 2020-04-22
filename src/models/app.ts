@@ -1,6 +1,6 @@
-import { Toast } from 'antd-mobile';
 import { getUserInfo, userLogin, userRegister } from '@/servers/user';
 import storage from '@/utils/storage';
+import { Toast } from 'antd-mobile';
 
 export interface IAppState {
   user?: IUser;
