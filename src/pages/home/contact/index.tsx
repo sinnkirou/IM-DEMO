@@ -1,9 +1,10 @@
 import { IAppState } from '@/models/app';
-import { List, ListView, SearchBar, Toast, WhiteSpace } from 'antd-mobile';
+import { List, ListView, SearchBar, WhiteSpace } from 'antd-mobile';
 import { connect } from 'dva';
 import pinyin from 'chinese-to-pinyin';
 import React from 'react';
 import { Sticky, StickyContainer } from 'react-sticky';
+import QueueAnim from 'rc-queue-anim';
 import { router } from 'umi';
 
 const { Item } = List;
@@ -87,6 +88,7 @@ class Index extends React.Component<IProps> {
       inputValue: '',
       dataSource,
       isLoading: true,
+      contactList: {},
     };
   }
 
@@ -178,23 +180,25 @@ class Index extends React.Component<IProps> {
           renderHeader={() => <WhiteSpace />}
           renderFooter={() => <WhiteSpace />}
           renderRow={(rowData, sectionID, rowID) => (
-            <Item
-              onClick={() => {
-                const { contactList } = this.state;
-                const section = contactList[sectionID] || [];
-                const user = section.find(d => d.id === rowID);
-                if (user) {
-                  router.push({
-                    pathname: '/home/chat',
-                    query: {
-                      targetId: user.id,
-                    },
-                  });
-                }
-              }}
-            >
-              {rowData}
-            </Item>
+            <QueueAnim type="left" delay={100}>
+              <Item
+                onClick={() => {
+                  const { contactList } = this.state;
+                  const section = contactList[sectionID] || [];
+                  const user = section.find(d => d.id === rowID);
+                  if (user) {
+                    router.push({
+                      pathname: '/home/chat',
+                      query: {
+                        targetId: user.id,
+                      },
+                    });
+                  }
+                }}
+              >
+                {rowData}
+              </Item>
+            </QueueAnim>
           )}
           quickSearchBarStyle={{
             top: 85,

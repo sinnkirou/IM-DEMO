@@ -27,7 +27,9 @@ class Index extends PureComponent<{
         click() {
           this.virtual.slides.length = 0;
           this.virtual.cache = [];
-          closeSwipe();
+          setTimeout(() => {
+            closeSwipe();
+          }, 300);
         },
       },
     });

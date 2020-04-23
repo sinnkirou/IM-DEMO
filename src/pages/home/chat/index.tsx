@@ -18,6 +18,7 @@ import {
   Toast,
   WhiteSpace,
 } from 'antd-mobile';
+import QueueAnim from 'rc-queue-anim';
 import { connect } from 'dva';
 import Hammer from 'hammerjs';
 import get from 'lodash/get';
@@ -133,17 +134,32 @@ class Index extends PureComponent<IProps> {
 
   public componentDidUpdate(prevProps, prevState) {
     if (this.state.messages.length !== prevState.messages.length) {
-      this.state.messages.forEach(item => {
+      const { length } = this.state.messages;
+      let timeout = 500;
+      const scrollIfTheLast = (index: number, size: number) => {
+        if (index === size - 1) {
+          this.scrollIntoLatest(timeout);
+        }
+      };
+      this.state.messages.forEach((item, index) => {
         const { type } = getFile(item.dataContent);
         if (type === DataType.IMAGE) {
-          this.loadOrDownloadFile(item);
+          timeout = 1000;
+          this.loadOrDownloadFile(item, false, () => {
+            scrollIfTheLast(index, length);
+          });
+        } else {
+          scrollIfTheLast(index, length);
         }
       });
-      this.scrollIntoLatest();
     }
   }
 
-  public loadOrDownloadFile = (msg: IMessage, isDownload: boolean = false) => {
+  public loadOrDownloadFile = (
+    msg: IMessage,
+    isDownload: boolean = false,
+    callback?: () => void
+  ) => {
     const download = (blobUrl: string) => {
       const a = document.createElement('a');
       a.download = file.name;
@@ -151,8 +167,8 @@ class Index extends PureComponent<IProps> {
       document.body.appendChild(a);
       a.click();
       a.remove();
-    }
-    const downloadWithBlobOrUrl = (blob: Blob|string) => {
+    };
+    const downloadWithBlobOrUrl = (blob: Blob | string) => {
       if (typeof blob !== 'string') {
         const reader = new FileReader();
         reader.readAsDataURL(blob as Blob);
@@ -171,7 +187,10 @@ class Index extends PureComponent<IProps> {
     }
     const file = getFile(msg.dataContent);
     if (file.url.indexOf('blob') >= 0) {
-      if (isDownload) { downloadWithBlobOrUrl(file.url); }
+      if (isDownload) {
+        downloadWithBlobOrUrl(file.url);
+      }
+      if (callback) callback();
       return;
     }
     this.props
@@ -195,6 +214,7 @@ class Index extends PureComponent<IProps> {
               dataContent: setFileMsgContent(file.name, DataType.IMAGE, msg.fp, blobUrl),
             },
           });
+          if (callback) callback();
         }
       });
   };
@@ -269,7 +289,6 @@ class Index extends PureComponent<IProps> {
     this.setState({
       toggleTarget: 'input',
     });
-    this.scrollIntoLatest();
   };
 
   public onSendMessage = () => {
@@ -290,16 +309,11 @@ class Index extends PureComponent<IProps> {
           to: targetId,
           fp: uuid(),
         };
+        this.appendMessage(message);
         dispatch({
           type: 'im/send',
           payload: {
             message,
-            handleSendResult: code => {
-              // console.debug(code);
-              if (code === 0) {
-                this.appendMessage(message);
-              }
-            },
           },
         }).catch(Toast.fail);
 
@@ -308,7 +322,7 @@ class Index extends PureComponent<IProps> {
     });
   };
 
-  public scrollIntoLatest = () => {
+  public scrollIntoLatest = (timeout: number = 500) => {
     const { pullRefreshing } = this.state;
     if (pullRefreshing) {
       this.setState({ pullRefreshing: false });
@@ -323,8 +337,9 @@ class Index extends PureComponent<IProps> {
         // }
         // console.debug('scrollHeight___________', height);
         this.scrollView.scrollTo(0, height);
+        // console.debug('scrollIntoLatest');
       }
-    }, 1000);
+    }, timeout);
   };
 
   public getMessages = () => {
@@ -343,7 +358,8 @@ class Index extends PureComponent<IProps> {
         toUserId: targetId,
         page: page || 1,
       },
-    }).catch(Toast.fail);
+    });
+    // .catch(Toast.fail);
   };
 
   public onRefresh = () => {
@@ -473,99 +489,97 @@ class Index extends PureComponent<IProps> {
     const isOwn = String(item.from) === String(currentUser.id);
     const file: IFile = getFile(item.dataContent);
 
-    if (file.type === DataType.IMAGE.toString()) {
-      // this.imageIds.push(item.fp);
-      // console.debug(item, file);
-    } else if (file.type === DataType.AUDIO.toString()) {
-      // this.setDuration(item.dataContent);
-    }
     return (
-      <div key={item.fp} id={item.fp} className={styles.mssageRow}>
-        {this.shouldShowTimeStamp(item) && (
-          <>
-            <WhiteSpace />
-            <Flex justify="center">
-              <span className={styles.datetime}>{this.formatTimeStamp(item.sendTs)}</span>
-            </Flex>
-            <WhiteSpace />
-          </>
-        )}
+      <QueueAnim delay={100}>
+        <div key={item.fp} id={item.fp} className={styles.mssageRow}>
+          {this.shouldShowTimeStamp(item) && (
+            <>
+              <WhiteSpace />
+              <Flex justify="center">
+                <span className={styles.datetime}>{this.formatTimeStamp(item.sendTs)}</span>
+              </Flex>
+              <WhiteSpace />
+            </>
+          )}
 
-        <Flex justify={isOwn ? 'end' : 'start'} align="start">
-          {!isOwn && <BizIcon type="icon-test" className={styles.userIcon} />}
+          <Flex justify={isOwn ? 'end' : 'start'} align="start">
+            {!isOwn && <BizIcon type="icon-test" className={styles.userIcon} />}
 
-          <Flex direction="column" align={isOwn ? 'end' : 'start'}>
-            <span className={styles.from}>
-              {(isOwn ? currentUser.nickname : targetUser.nickname) || ''}
-            </span>
-            <Flex direction="row" justify={isOwn ? 'end' : 'start'}>
-              {isOwn && item.sentSuccess === undefined && <ActivityIndicator />}
-              {isOwn && item.sentSuccess === false && <BizIcon type="reload" />}
-              {file.type === DataType.TEXT && (
-                <span className={`messageItem ${isOwn ? styles.ownMessage : styles.otherMessage}`}>
-                  {item.dataContent}
-                </span>
-              )}
-              {file.type === DataType.IMAGE && (
-                <img
-                  className={`messageItem ${styles.messageImg}`}
-                  src={file.url}
-                  alt="img"
-                  onClick={() => {
-                    this.setState({
-                      toggleSwipe: true,
-                      curImageId: item.fp,
-                    });
-                  }}
-                />
-              )}
-              {file.type === DataType.AUDIO.toString() && (
-                <span
-                  className={`messageItem ${isOwn ? styles.ownMessage : styles.otherMessage}`}
-                  onClick={() => {
-                    // this.playAudio(item);
-                  }}
-                  style={{ width: `${this.getAudioWidth(file.url)}rem` }}
-                  id={item.dataContent}
-                >
-                  <Flex>
-                    {`${audioDurations[item.dataContent]}''`}
-                    {<AudioPlaying isPlaying={playingItem === item.fp} />}{' '}
-                  </Flex>
-                </span>
-              )}
-              {file.type === DataType.FILE.toString() && (
-                <span
-                  className={`messageItem ${isOwn ? styles.ownMessage : styles.otherMessage}`}
-                  onClick={() => {
-                    Modal.alert('Download', 'Are you sure?', [
-                      { text: 'Cancel' },
-                      {
-                        text: 'Ok',
-                        onPress: () => {
-                          this.loadOrDownloadFile(item, true);
+            <Flex direction="column" align={isOwn ? 'end' : 'start'}>
+              <span className={styles.from}>
+                {(isOwn ? currentUser.nickname : targetUser.nickname) || ''}
+              </span>
+              <Flex direction="row" justify={isOwn ? 'end' : 'start'}>
+                {isOwn && item.sentSuccess === undefined && <ActivityIndicator />}
+                {isOwn && item.sentSuccess === false && <BizIcon type="reload" />}
+                {file.type === DataType.TEXT && (
+                  <span
+                    className={`messageItem ${isOwn ? styles.ownMessage : styles.otherMessage}`}
+                  >
+                    {item.dataContent}
+                  </span>
+                )}
+                {file.type === DataType.IMAGE && (
+                  <img
+                    className={`messageItem ${styles.messageImg}`}
+                    src={file.url}
+                    alt="img"
+                    onClick={() => {
+                      this.setState({
+                        toggleSwipe: true,
+                        curImageId: item.fp,
+                      });
+                    }}
+                  />
+                )}
+                {file.type === DataType.AUDIO.toString() && (
+                  <span
+                    className={`messageItem ${isOwn ? styles.ownMessage : styles.otherMessage}`}
+                    onClick={() => {
+                      // this.playAudio(item);
+                    }}
+                    style={{ width: `${this.getAudioWidth(file.url)}rem` }}
+                    id={item.dataContent}
+                  >
+                    <Flex>
+                      {`${audioDurations[item.dataContent]}''`}
+                      {<AudioPlaying isPlaying={playingItem === item.fp} />}{' '}
+                    </Flex>
+                  </span>
+                )}
+                {file.type === DataType.FILE.toString() && (
+                  <span
+                    className={`messageItem ${isOwn ? styles.ownMessage : styles.otherMessage}`}
+                    onClick={() => {
+                      Modal.alert('Download', 'Are you sure?', [
+                        { text: 'Cancel' },
+                        {
+                          text: 'Ok',
+                          onPress: () => {
+                            this.loadOrDownloadFile(item, true);
+                          },
                         },
-                      },
-                    ]);
-                  }}
-                >
-                  {file.name}
-                  &nbsp;&nbsp;
-                  <BizIcon type="weizhiwenjian" style={{ fontSize: '0.5rem' }} />
-                </span>
-              )}
+                      ]);
+                    }}
+                  >
+                    {file.name}
+                    &nbsp;&nbsp;
+                    <BizIcon type="weizhiwenjian" style={{ fontSize: '0.5rem' }} />
+                  </span>
+                )}
+              </Flex>
             </Flex>
-          </Flex>
 
-          {isOwn &&
-            (userImageSrc ? (
-              <img src={userImageSrc} alt="head" className={styles.roundIcon} />
-            ) : (
-              <BizIcon type="icon-test" className={styles.userIcon} />
-            ))}
-        </Flex>
-        <WhiteSpace />
-      </div>
+            {isOwn &&
+              (userImageSrc ? (
+                <img src={userImageSrc} alt="head" className={styles.roundIcon} />
+              ) : (
+                <BizIcon type="icon-test" className={styles.userIcon} />
+              ))}
+          </Flex>
+          <WhiteSpace />
+        </div>
+      </QueueAnim>
     );
   };
 
@@ -580,10 +594,11 @@ class Index extends PureComponent<IProps> {
         renderRow={this.generateRow}
         className={styles.scrollList}
         pullToRefresh={<PullToRefresh refreshing={pullRefreshing} onRefresh={this.onRefresh} />}
-        initialListSize={10}
+        initialListSize={100}
         ref={el => {
           this.scrollView = el;
         }}
+        pageSize={10}
       />
     );
   };
@@ -612,9 +627,24 @@ class Index extends PureComponent<IProps> {
     }
     // console.debug(type);
     if (file) {
+      const { currentUser } = this.state;
+      const {
+        location: {
+          query: { targetId },
+        },
+      } = this.props;
+      const fp = uuid();
+      const fileUrl = getLocalFileURL(file);
+      const message: IMessageBase = {
+        fp,
+        dataContent: setFileMsgContent(file.name, type, fp, fileUrl),
+        from: currentUser.id,
+        to: targetId,
+      };
+
+      this.appendMessage(message);
       const formData = new FormData();
       formData.append('file', file);
-
       this.props
         .dispatch({
           type: 'im/fileUpload',
@@ -622,33 +652,13 @@ class Index extends PureComponent<IProps> {
         })
         .then(data => {
           if (data) {
-            const { currentUser } = this.state;
-            const {
-              location: {
-                query: { targetId },
-              },
-            } = this.props;
-            const fp = uuid();
-            const message: IMessageBase = {
-              fp,
-              dataContent: setFileMsgContent(file.name, type, fp, data),
-              from: currentUser.id,
-              to: targetId,
-            };
             this.props
               .dispatch({
                 type: 'im/send',
                 payload: {
-                  message,
-                  handleSendResult: code => {
-                    // console.debug(code);
-                    if (code === 0) {
-                      const fileUrl = getLocalFileURL(file);
-                      this.appendMessage({
-                        ...message,
-                        dataContent: setFileMsgContent(file.name, type, fp, fileUrl),
-                      });
-                    }
+                  message: {
+                    ...message,
+                    dataContent: setFileMsgContent(file.name, type, fp, data),
                   },
                 },
               })
@@ -662,7 +672,7 @@ class Index extends PureComponent<IProps> {
   public renderChatInput = () => {
     const { form } = this.props;
     const { getFieldProps } = form;
-    const { toggleTarget, } = this.state;
+    const { toggleTarget } = this.state;
 
     return (
       <div className={styles.toolPanel} key="toolPanel">
@@ -761,7 +771,7 @@ class Index extends PureComponent<IProps> {
               }}
               accept="image/*"
               capture="camera"
-              className={styles.hiddenInput}
+              className={styles.hidden}
               onChange={e => {
                 this.onFileChange(e, DataType.IMAGE);
               }}
@@ -772,7 +782,7 @@ class Index extends PureComponent<IProps> {
                 this.imagePickerRef = el;
               }}
               accept="image/*"
-              className={styles.hiddenInput}
+              className={styles.hidden}
               onChange={e => {
                 this.onFileChange(e, DataType.IMAGE);
               }}
@@ -782,7 +792,7 @@ class Index extends PureComponent<IProps> {
               ref={el => {
                 this.filePickerRef = el;
               }}
-              className={styles.hiddenInput}
+              className={styles.hidden}
               onChange={e => {
                 this.onFileChange(e, DataType.FILE);
               }}
