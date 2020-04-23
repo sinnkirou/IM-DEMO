@@ -16,7 +16,7 @@ export interface IUser {
 }
 
 const defState: IAppState = {
-  user: null,
+  user: {},
   contacts: [],
 };
 export default {
@@ -68,6 +68,9 @@ export default {
     STATE(state, { payload }) {
       return { ...state, ...payload };
     },
+    RESET() {
+      return defState;
+    }
   },
   subscriptions: {
     init({ dispatch, history }) {

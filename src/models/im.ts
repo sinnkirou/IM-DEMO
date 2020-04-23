@@ -88,10 +88,7 @@ export default {
 		*signout({}, { put }) {
 			Manager.getInstance().logout();
 			yield put({
-				type: 'STATE',
-				payload: {
-					...defState
-				}
+				type: 'RESET',
 			});
 		},
 		*release() {
@@ -147,6 +144,9 @@ export default {
 	reducers: {
 		STATE(state, { payload }) {
 			return { ...state, ...payload };
+		},
+		RESET() {
+			return defState;
 		},
 		INSERT_MESSAGE(state: IMState, { payload }) {
 			const { messages } = state;
