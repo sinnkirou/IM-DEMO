@@ -226,18 +226,7 @@ class Index extends PureComponent<IProps> {
       () => {
         const { toggleTarget } = this.state;
         if (toggleTarget === 'audio') {
-          // permissionManager.checkPermission({
-          //   permissionList: [PERMISSIONS.RECORD_AUDIO],
-          //   permissionReady: () => {
-          //     this.mediaSrc = `mdqSmartCare/audios/myRecording${moment().format(
-          //       'YYYYMMDDHHmmss'
-          //     )}.wav`;
-          //     console.debug(`recording${this.mediaSrc}`);
-          //     this.audios[this.mediaSrc] = audioUtil.initRecord(this.mediaSrc);
-          //     audioUtil.startRecord(this.audios[this.mediaSrc]);
-          //     this.setState({ recording: true });
-          //   },
-          // });
+
         }
       },
       15,
@@ -247,15 +236,7 @@ class Index extends PureComponent<IProps> {
     pressup.on(
       'pressup',
       () => {
-        // const { toggleAudio } = this.state;
-        // if (toggleAudio) {
-        //   console.debug('recorded');
-        //   audioUtil.stopRecord(this.audios[this.mediaSrc]);
-        //   this.setState({ recording: false });
-        //   setTimeout(() => {
-        //     this.appendMessage({ dataContent: this.mediaSrc, type: 'audio' });
-        //   }, 1000);
-        // }
+
       },
       15
     );
@@ -422,58 +403,6 @@ class Index extends PureComponent<IProps> {
     }
     return moment(time).format('MMM Do HH:mm');
   };
-
-  // playAudio = item => {
-  //   const { id, dataContent: src } = item;
-  //   const { playingItem, audioDurations } = this.state;
-
-  //   this.setState({ playingItem: !playingItem ? id : null }, () => {
-  //     if (!this.audios[src]) {
-  //       this.audios[src] = audioUtil.initRecord(src);
-  //     }
-  //     const { playingItem: _playingItem } = this.state;
-  //     if (_playingItem) {
-  //       audioUtil.play(this.audios[src]);
-  //       const duration = audioDurations[src] + 1;
-  //       this.autoStop = setTimeout(() => {
-  //         console.debug('autoStopped');
-  //         this.setState({ playingItem: null });
-  //       }, duration * 1000);
-  //     } else {
-  //       audioUtil.stop(this.audios[src]);
-  //       console.debug('stopped');
-  //       clearTimeout(this.autoStop);
-  //     }
-  //   });
-  // };
-
-  // setDuration = src => {
-  //   const { audioDurations } = this.state;
-  //   if (audioDurations[src]) return;
-  //   if (!this.audios[src]) {
-  //     this.audios[src] = audioUtil.initRecord(src);
-  //   }
-  //   audioUtil.setVolume(this.audios[src], '0.0');
-  //   audioUtil.play(this.audios[src]);
-  //   let duration = audioUtil.getDuration(this.audios[src]);
-  //   let counter = 0;
-  //   const timerDur = setInterval(() => {
-  //     counter += 100;
-  //     if (counter > 2000) {
-  //       clearInterval(timerDur);
-  //     }
-  //     duration = audioUtil.getDuration(this.audios[src]);
-  //     console.debug(`${duration}sec`);
-  //     if (duration > 0) {
-  //       audioUtil.stop(this.audios[src]);
-  //       audioUtil.setVolume(this.audios[src], '1.0');
-  //       audioDurations[src] = duration;
-  //       this.setState({ audioDurations: { ...audioDurations } });
-  //       console.debug(`${duration}sec...`);
-  //       clearInterval(timerDur);
-  //     }
-  //   }, 100);
-  // };
 
   public getAudioWidth = src => {
     const { audioDurations } = this.state;

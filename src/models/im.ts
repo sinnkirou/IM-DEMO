@@ -9,8 +9,8 @@ import cloneDeep from 'lodash/cloneDeep';
 import concat from 'lodash/concat';
 import uniqBy from 'lodash/uniqBy';
 import router from 'umi/router';
-// import Manager from 'srt-im-sdk';
-import Manager, { WSOptions } from '../../../shurui-im-sdk/src/index';
+import Manager, { WSOptions } from 'srt-im-sdk';
+// import Manager, { WSOptions } from '../../../shurui-im-sdk/src/index';
 
 export interface IMessageBase {
 	fp: string;
