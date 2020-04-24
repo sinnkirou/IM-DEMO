@@ -1,3 +1,4 @@
+import { IMessage } from '@/components/ChatWrap/index.d';
 import { fileDownload, fileUpload } from '@/servers/file';
 import { syncMessages } from '@/servers/message';
 import { WS_URL } from '@/utils/config';
@@ -8,23 +9,9 @@ import { Toast } from 'antd-mobile';
 import cloneDeep from 'lodash/cloneDeep';
 import concat from 'lodash/concat';
 import uniqBy from 'lodash/uniqBy';
-import router from 'umi/router';
 import Manager, { WSOptions } from 'srt-im-sdk';
+import router from 'umi/router';
 // import Manager, { WSOptions } from '../../../shurui-im-sdk/src/index';
-
-export interface IMessageBase {
-	fp: string;
-	from: string;
-	to: string;
-	dataContent: string;
-}
-
-export interface IMessage extends IMessageBase {
-	fp: string;
-	typeu?: number;
-	sendTs: any;
-	sentSuccess?: boolean;
-}
 
 export interface IMState {
 	loginStatus: boolean;

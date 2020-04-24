@@ -83,7 +83,7 @@ class Index extends Component<{
     const { form } = this.props;
     const { getFieldError } = form;
     Toast.hide();
-    Toast.fail(getFieldError(filedName), 3, () => {}, false);
+    Toast.fail(getFieldError(filedName), 3, null, false);
   };
 
   public renderForm = () => {

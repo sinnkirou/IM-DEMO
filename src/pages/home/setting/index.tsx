@@ -28,7 +28,7 @@ class Index extends PureComponent<IProps> {
       <div key="userInfo">
         <List>
           <List.Item arrow="horizontal" className={styles.userBar}>
-            <Link to="/setting/selfInfo">
+            <Link to="/home/setting">
               <span className={styles.userHead}>
                 {/* {localInfo.head ? (
                   <img src={localInfo.head} alt="head" className={styles.userImg} />
@@ -53,7 +53,7 @@ class Index extends PureComponent<IProps> {
       <div key="menuItems">
         <List>
           <List.Item arrow="horizontal" className={styles.listContent}>
-            <Link to="/setting/reset">
+            <Link to="/home/setting">
               <span>
                 <BizIcon type="lock-fill" className={styles.passwordIcon} />
               </span>
@@ -65,7 +65,7 @@ class Index extends PureComponent<IProps> {
         <WhiteSpace size="lg" />
         <List>
           <List.Item arrow="horizontal" className={styles.listContent}>
-            <Link to="/setting/about">
+            <Link to="/home/setting">
               <span>
                 <BizIcon type="tags-fill" className={styles.aboutIcon} />
               </span>
