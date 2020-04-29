@@ -1,6 +1,6 @@
 export interface IMessageBase {
   fp: string;
-  from: string;
+  from?: string;
   to: string;
   dataContent: string;
 }

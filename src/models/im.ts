@@ -66,8 +66,13 @@ export default {
 			if (!autoLogin || (autoLogin && hasLoginedOnce)) {
 				const { id, token } = storage.local.get('user');
 				if (id && token) {
-					Manager.getInstance().login(id, token, 'test', null, (code) => {
-						if (callBack) { callBack(code); }
+					Manager.getInstance().login({
+						loginToken: token,
+						logiUserId: id,
+						app: 'test',
+						callBack: (code) => {
+							if (callBack) { callBack(code); }
+						}
 					});
 				}
 			}
@@ -83,9 +88,15 @@ export default {
 		},
 		*send({ payload }, { call, put, select }) {
 			const msg: IMessage = payload.message;
-			Manager.getInstance().send(msg.dataContent, String(msg.from), String(msg.to), true, msg.fp, null, (code) => {
-				if (payload.handleSendResult) {
-					payload.handleSendResult(code);
+			Manager.getInstance().send({
+				dataContent: msg.dataContent, 
+				toId: String(msg.to), 
+				fingerPrint: msg.fp, 
+				callBack: (code, msg) => {
+					if (payload.handleSendResult) {
+						payload.handleSendResult(code);
+						console.debug(msg);
+					}
 				}
 			});
 		},
