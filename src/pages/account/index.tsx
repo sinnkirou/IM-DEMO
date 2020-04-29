@@ -9,7 +9,8 @@ import router from 'umi/router';
 class Index extends PureComponent<IConnectFormProps> {
 
   public componentDidMount() {
-    if(storage.cookie.get('token')) {
+    const user = storage.local.get('user');
+    if(user && user.token) {
       router.push('home');
     }
   }
