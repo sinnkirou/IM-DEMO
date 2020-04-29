@@ -36,7 +36,7 @@
     "rc-queue-anim": "^1.8.4",
     "react": "^16.5.1",
     "react-sticky": "^6.0.3",
-    "srt-im-sdk": "0.0.5",
+    "srt-im-sdk": "0.0.6",
     "swiper": "^5.3.7",
     "uuid": "^7.0.3",
     "webuploader": "^0.1.8"

@@ -68,7 +68,7 @@ export default {
 				if (id && token) {
 					Manager.getInstance().login({
 						loginToken: token,
-						logiUserId: id,
+						loginUserId: id,
 						app: 'test',
 						callBack: (code) => {
 							if (callBack) { callBack(code); }
