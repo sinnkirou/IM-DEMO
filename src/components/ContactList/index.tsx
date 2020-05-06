@@ -33,13 +33,15 @@ interface IProps {
     contacts: IUser[]
 }
 
+interface IState {
+  inputValue?: string;
+  dataSource: any;
+  isLoading: boolean;
+  contactList: IContactList;
+}
+
 class Index extends React.Component<IProps> {
-  public state: {
-    inputValue?: string;
-    dataSource: any;
-    isLoading: boolean;
-    contactList: IContactList;
-  } = {
+  public state: IState = {
     dataSource: null,
     isLoading: true,
     contactList: {},
@@ -65,10 +67,10 @@ class Index extends React.Component<IProps> {
     };
   }
 
-  public componentWillMount() {
+  public static getDerivedStateFromProps(props: IProps, state) { 
     const {
         contacts
-    } = this.props;
+    } = props;
     const contactList: IContactList = {};
 
     contacts.forEach(item => {
@@ -84,8 +86,8 @@ class Index extends React.Component<IProps> {
       contactList[key] = value;
     });
 
-    this.setState({
-      dataSource: genData(this.state.dataSource, contactList),
+    return ({
+      dataSource: genData(state.dataSource, contactList),
       isLoading: false,
       contactList,
     });

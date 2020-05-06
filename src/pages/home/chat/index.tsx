@@ -33,16 +33,19 @@ class Index extends PureComponent<IProps> {
     targetUser: {},
   };
 
-  public componentDidMount() {
+  public static getDerivedStateFromProps(props: IProps) { 
     const {
       location: {
         query: { targetId },
       },
       app: { user, contacts },
-    } = this.props;
+    } = props;
     const targetUser = contacts.find(i => String(i.id) === String(targetId)) || {};
-    this.setState({
-      targetUser,
+    return ({
+      targetUser: {
+        ...targetUser,
+        id: targetId,
+      },
       currentUser: user,
     });
   }

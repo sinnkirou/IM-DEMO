@@ -202,7 +202,7 @@ class Index extends PureComponent<IProps> {
   public appendMessage = (message: IMessageBase) => {
     const newMessage = {
       ...message,
-      sendTs: moment().format('YYYY-MM-DD HH:mm:ss'),
+      sendTs: new Date().getTime(),
     };
     // console.debug(newMessage);
     this.props.insertMsg(newMessage);

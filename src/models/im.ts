@@ -222,6 +222,7 @@ export default {
 					payload: {
 						...format(msg, chatMessageRule),
 						sentSuccess: true,
+						sendTs: msg.sendTs * 1000
 					}
 				});
 			};
