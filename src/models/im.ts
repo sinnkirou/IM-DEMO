@@ -1,3 +1,4 @@
+import { IMessage } from '@/components/ChatWrap/index.d';
 import { fileDownload, fileUpload } from '@/servers/file';
 import { syncMessages } from '@/servers/message';
 import { WS_URL } from '@/utils/config';
@@ -8,23 +9,9 @@ import { Toast } from 'antd-mobile';
 import cloneDeep from 'lodash/cloneDeep';
 import concat from 'lodash/concat';
 import uniqBy from 'lodash/uniqBy';
-import router from 'umi/router';
 import Manager, { WSOptions } from 'srt-im-sdk';
+import router from 'umi/router';
 // import Manager, { WSOptions } from '../../../shurui-im-sdk/src/index';
-
-export interface IMessageBase {
-	fp: string;
-	from: string;
-	to: string;
-	dataContent: string;
-}
-
-export interface IMessage extends IMessageBase {
-	fp: string;
-	typeu?: number;
-	sendTs: any;
-	sentSuccess?: boolean;
-}
 
 export interface IMState {
 	loginStatus: boolean;
@@ -79,8 +66,13 @@ export default {
 			if (!autoLogin || (autoLogin && hasLoginedOnce)) {
 				const { id, token } = storage.local.get('user');
 				if (id && token) {
-					Manager.getInstance().login(id, token, 'test', null, (code) => {
-						if (callBack) { callBack(code); }
+					Manager.getInstance().login({
+						loginToken: token,
+						loginUserId: id,
+						app: 'test',
+						callBack: (code) => {
+							if (callBack) { callBack(code); }
+						}
 					});
 				}
 			}
@@ -96,9 +88,15 @@ export default {
 		},
 		*send({ payload }, { call, put, select }) {
 			const msg: IMessage = payload.message;
-			Manager.getInstance().send(msg.dataContent, String(msg.from), String(msg.to), true, msg.fp, null, (code) => {
-				if (payload.handleSendResult) {
-					payload.handleSendResult(code);
+			Manager.getInstance().send({
+				dataContent: msg.dataContent, 
+				toId: String(msg.to), 
+				fingerPrint: msg.fp, 
+				callBack: (code, msg) => {
+					if (payload.handleSendResult) {
+						payload.handleSendResult(code);
+						console.debug(msg);
+					}
 				}
 			});
 		},
@@ -224,6 +222,7 @@ export default {
 					payload: {
 						...format(msg, chatMessageRule),
 						sentSuccess: true,
+						sendTs: msg.sendTs * 1000
 					}
 				});
 			};

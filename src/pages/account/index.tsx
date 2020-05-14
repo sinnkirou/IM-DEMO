@@ -1,15 +1,16 @@
+import storage from '@/utils/storage';
 import { Button, InputItem, List, Toast, WhiteSpace, WingBlank } from 'antd-mobile';
 import { connect } from 'dva';
 import { createForm } from 'rc-form';
 import React, { PureComponent } from 'react';
 import router from 'umi/router';
-import storage from '@/utils/storage';
 
 @connect()
 class Index extends PureComponent<IConnectFormProps> {
 
   public componentDidMount() {
-    if(storage.cookie.get('token')) {
+    const user = storage.local.get('user');
+    if(user && user.token) {
       router.push('home');
     }
   }
@@ -66,7 +67,7 @@ class Index extends PureComponent<IConnectFormProps> {
     const { form } = this.props;
     const { getFieldError } = form;
     Toast.hide();
-    Toast.fail(getFieldError(filedName), 3, () => { }, false);
+    Toast.fail(getFieldError(filedName), 3, null, false);
   };
 
   public renderForm = () => {

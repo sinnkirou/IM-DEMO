@@ -1,0 +1,161 @@
+@padding: 0.2rem;
+@margin: 0.2rem;
+@base-font: 0.2rem;
+
+@head-size: 0.5rem;
+@head-margin: 0.05rem;
+@triangle-size: 0.1rem;
+@triangle-offset: @head-size + @head-margin *2 + @triangle-size;
+
+.titleIcon {
+  margin-bottom: 10px;
+  color: white;
+}
+
+.scrollList {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden !important;
+  background-color: white;
+
+  .mssageRow {
+
+    .datetime {
+      font-size: @base-font;
+    }
+  
+    .nickname {
+      font-size: @base-font;
+      color: gray;
+      margin-left: @margin;
+      margin-right: @margin;
+    }
+    .message {
+      padding: @padding;
+      border-radius: 0.2rem;
+      -webkit-user-select: auto;
+      user-select: auto;
+      font-size: 0.35rem;
+      max-width: 70vw;
+      word-break: break-word;
+      margin-left: @margin;
+      margin-right: @margin;
+    }
+    
+    .otherMessage {
+      .message;
+      background-color: #ddd;
+    }
+    .otherMessage::after {
+      content: " ";
+      width: 0;
+      height: 0;
+      border-bottom: @triangle-size solid transparent;
+      border-top: @triangle-size solid transparent;
+      border-right: @triangle-size solid #ddd;
+      position: absolute;
+      left: @triangle-offset;
+    }
+    
+    .ownMessage {
+      .message;
+      background-color: @brand-primary;
+      color: white;
+      text-align: right;
+      margin-right: @margin;
+    }
+
+    .ownMessage::after {
+      content: " ";
+      width: 0;
+      height: 0;
+      border-bottom: @triangle-size solid transparent;
+      border-top: @triangle-size solid transparent;
+      border-left: @triangle-size solid @brand-primary;;
+      position: absolute;
+      right: @triangle-offset;
+    }
+    
+    .messageImg {
+      .message;
+      padding: 0;
+      width: 50%;
+      height: 50%;
+    }
+    
+    .userIcon {
+      font-size: @head-size;
+      margin-right: @head-margin;
+      margin-left: @head-margin;
+    }
+    
+    .roundIcon {
+      width: @head-size;
+      height: @head-size;
+      display: flex;
+      border-radius: 50%;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      margin-right: @head-margin;
+      margin-left: @head-margin;
+    }
+  }
+
+  :global {
+    .am-list-body {
+      border: 0;
+    }
+    .am-pull-to-refresh-content-wrapper {
+      min-height: 80vh;
+    }
+  }
+}
+
+.toolPanel {
+  background-color: @brand-second;
+
+  .inputPanel {
+    display: flex;
+    align-items: center;
+    padding: @padding;
+    color: darkgray;
+    form {
+      display: inline-block;
+      flex: 1;
+      margin-right: @margin;
+    }
+  }
+
+  .multiplePanel {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    i {
+      flex: 1;
+      padding: @padding;
+      font-size: 0.75rem;
+    }
+  }
+
+  .hidden {
+    position: absolute;
+    z-index: -1;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  :global {
+    .am-list-line {
+      border: 1px solid #cecbcb80;
+      background-color: white;
+      padding: @padding;
+    }
+
+    .am-grid .am-flexbox .am-flexbox-item .am-grid-item-content .am-grid-item-inner-content .am-grid-text {
+      font-size: 0.4rem;
+    }
+  }
+}
